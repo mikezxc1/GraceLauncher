@@ -14,13 +14,13 @@ val keystoreProps = java.util.Properties().apply {
 
 android {
     namespace = "com.galaxyrio.gracelauncher"
-    compileSdk = 37
+    compileSdk = 36
     buildToolsVersion = "36.1.0"
 
     defaultConfig {
         applicationId = "com.galaxyrio.gracelauncher"
         minSdk = 28
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 15
         versionName = "1.2.3"
 

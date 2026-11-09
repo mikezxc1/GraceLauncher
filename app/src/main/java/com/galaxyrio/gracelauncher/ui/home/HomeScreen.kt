@@ -409,6 +409,7 @@ fun HomeScreen(
                             val folder = app.folderId?.let(favoriteFolders::get)
                             if (folder?.isAppStack == true) AppStack(folder, uiState,
                                 onLaunch = { item, bounds -> rowGestures.onLaunchAt?.invoke(item, bounds) ?: onLaunchApp(item) },
+                                onOpenPopup = { item, bounds -> onAppShortcuts(item, bounds) },
                                 onDetails = onAppDetails, onEdit = { onEditFolder(folder) },
                                 modifier = Modifier.padding(horizontal = LauncherLayout.ContentInset - AppStackInset.dp, vertical = 4.dp))
                             else if (folder != null) FolderRow(folder, app = app,

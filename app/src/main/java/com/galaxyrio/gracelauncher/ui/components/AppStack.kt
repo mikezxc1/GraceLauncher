@@ -5,6 +5,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntOffsetAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -42,6 +44,7 @@ import com.galaxyrio.gracelauncher.ui.theme.LocalLauncherAppearance
 internal fun AppStack(
     stack: LauncherFolder, uiState: LauncherUiState,
     onLaunch: (LauncherApp, Rect) -> Unit, onDetails: (LauncherApp) -> Unit, onEdit: () -> Unit,
+    onOpenPopup: ((LauncherApp, Rect) -> Unit)? = null,
     modifier: Modifier = Modifier, enabled: Boolean = true, gridManaged: Boolean = false,
     expanded: Boolean? = null, onExpandedChange: ((Boolean) -> Unit)? = null,
     iconSize: Dp = 40.dp, onWallpaper: Boolean = true,
@@ -88,6 +91,31 @@ internal fun AppStack(
                 Box(Modifier.offset(x = inset + step * (index % columns), y = inset + rowStep * (index / columns))
                     .size(displayedIconSize).graphicsLayer { this.alpha = alpha }
                     .then(if (!visible) Modifier.clearAndSetSemantics {} else Modifier)
+                    // 横向滑动打开快捷弹窗。只认横向位移超过阈值且纵向位移很小的手势，
+                    // 避免和页面本身的纵向滚动、以及长按拖动排序抢事件。
+                    .then(
+                        if (onOpenPopup != null && inputEnabled && visible) {
+                            Modifier.pointerInput(app.key, gridManaged) {
+                                var totalX = 0f
+                                var totalY = 0f
+                                var fired = false
+                                detectDragGestures(
+                                    onDragStart = { totalX = 0f; totalY = 0f; fired = false },
+                                    onDragEnd = {},
+                                    onDragCancel = {},
+                                ) { change, dragAmount ->
+                                    change.consume()
+                                    totalX += dragAmount.x
+                                    totalY += dragAmount.y
+                                    if (!fired && kotlin.math.abs(totalX) > 72f &&
+                                        kotlin.math.abs(totalY) < kotlin.math.abs(totalX) * 0.6f) {
+                                        fired = true
+                                        onOpenPopup.invoke(app, bounds)
+                                    }
+                                }
+                            }
+                        } else Modifier
+                    )
                     .combinedClickable(enabled = inputEnabled && visible,
                         interactionSource = interactions, indication = null,
                         onClick = { onLaunch(app, bounds) },

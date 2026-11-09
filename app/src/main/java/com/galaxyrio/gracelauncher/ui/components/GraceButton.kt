@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
@@ -196,9 +197,18 @@ internal fun GraceButtonArtwork(artwork: ImageBitmap?, design: IconDesign, size:
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         shadowElevation = if (!editing && design.shape == IconShape.None) 0.dp else 2.dp * (size / 54.dp)) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (!editing && artwork != null) Image(artwork, null, Modifier.fillMaxSize())
-            else Icon(painterResource(if (editing) R.drawable.ms_check else R.drawable.ic_grace_solid), null,
-                Modifier.size(size * (if (editing) 26f else 40f) / 54f))
+            if (!editing && artwork != null) {
+                // 不能铺满：图标包里的图自带不透明底色，fillMaxSize 会把
+                // 25% 半透明的背景整个盖住，看起来就成了实心圆。
+                // 缩到六成放在中间，四周留一圈，玻璃感才透得出来。
+                Image(artwork, null, Modifier.fillMaxSize(0.6f).clip(CircleShape))
+            } else {
+                Icon(
+                    painterResource(if (editing) R.drawable.ms_check else R.drawable.ic_grace_solid),
+                    null,
+                    Modifier.size(size * (if (editing) 26f else 40f) / 54f),
+                )
+            }
         }
     }
 }

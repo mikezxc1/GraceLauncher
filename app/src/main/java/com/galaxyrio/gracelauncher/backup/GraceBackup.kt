@@ -40,6 +40,13 @@ object GraceBackup {
     private const val DATABASE = "grace_launcher.db"
     private const val FONT_DIR = "clock_fonts"
 
+    /**
+     * 自定义图标目录。用户单独给某个应用挑的图片存这里，
+     * 数据库只记「哪个应用用哪张图」，图片本体是独立的 PNG 文件。
+     * 只备份数据库的话，恢复后图标会变成空白，所以必须一起打包。
+     */
+    private const val ICON_DIR = "item_icons"
+
     /** SharedPreferences 文件名。新增偏好存储时这里要同步加。 */
     private val PREFERENCES = listOf("launcher_appearance", "grace_launcher_preferences")
 
@@ -107,6 +114,16 @@ object GraceBackup {
                     if (font.isFile) {
                         zip.putNextEntry(ZipEntry("fonts/${font.name}"))
                         font.inputStream().use { it.copyTo(zip) }
+                        zip.closeEntry()
+                        entries++
+                    }
+                }
+                // 自定义图标图片。数据库只存引用，图片本体在这里，
+                // 不打包的话恢复后那些单独挑过图标的应用会显示空白。
+                File(context.filesDir, ICON_DIR).listFiles()?.forEach { icon ->
+                    if (icon.isFile) {
+                        zip.putNextEntry(ZipEntry("icons/${icon.name}"))
+                        icon.inputStream().use { it.copyTo(zip) }
                         zip.closeEntry()
                         entries++
                     }
@@ -278,6 +295,11 @@ object GraceBackup {
             val file = File(context.noBackupFilesDir, name)
             if (file.isFile) file.copyTo(File(noBackupDir, name), overwrite = true)
         }
+        // 自定义图标也进回退点：恢复失败时能把原来的图标一并退回去
+        val iconsSnapshot = File(dir, "icons").apply { mkdirs() }
+        File(context.filesDir, ICON_DIR).listFiles()?.forEach { file ->
+            if (file.isFile) file.copyTo(File(iconsSnapshot, file.name), overwrite = true)
+        }
 
         val undo: () -> Unit = {
             dbDir?.let { owner ->
@@ -293,6 +315,11 @@ object GraceBackup {
             NO_BACKUP.forEach { name ->
                 val saved = File(noBackupDir, name)
                 if (saved.isFile) saved.copyTo(File(context.noBackupFilesDir, name), overwrite = true)
+            }
+            File(iconsSnapshot).listFiles()?.forEach { saved ->
+                if (saved.isFile) {
+                    saved.copyTo(File(context.filesDir, ICON_DIR + "/" + saved.name), overwrite = true)
+                }
             }
             LauncherDatabase.closeInstance()
         }
@@ -327,6 +354,11 @@ object GraceBackup {
         val fonts = File(context.filesDir, FONT_DIR).apply { mkdirs() }
         File(staging, "fonts").listFiles()?.forEach { source ->
             if (source.isFile) source.copyTo(File(fonts, source.name), overwrite = true)
+        }
+
+        val icons = File(context.filesDir, ICON_DIR).apply { mkdirs() }
+        File(staging, "icons").listFiles()?.forEach { source ->
+            if (source.isFile) source.copyTo(File(icons, source.name), overwrite = true)
         }
 
         // 偏好写回磁盘，内存缓存由重启清除

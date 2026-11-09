@@ -8,8 +8,12 @@ plugins {
 
 
 val keystorePropsFile = rootProject.file("keystore.properties")
-val keystoreProps = java.util.Properties().apply {
-    if (keystorePropsFile.exists()) keystorePropsFile.inputStream().use { load(it) }
+val keystoreProps: Map<String, String> = if (keystorePropsFile.exists()) {
+    val holder = java.util.Properties()
+    keystorePropsFile.inputStream().use { holder.load(it) }
+    holder.entries.associate { it.key.toString() to it.value.toString() }
+} else {
+    emptyMap()
 }
 
 android {
@@ -30,10 +34,10 @@ android {
     signingConfigs {
         create("mike") {
             if (keystoreProps.isNotEmpty()) {
-                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
-                storePassword = keystoreProps.getProperty("storePassword")
-                keyAlias = keystoreProps.getProperty("keyAlias")
-                keyPassword = keystoreProps.getProperty("keyPassword")
+                storeFile = rootProject.file(keystoreProps["storeFile"])
+                storePassword = keystoreProps["storePassword"]
+                keyAlias = keystoreProps["keyAlias"]
+                keyPassword = keystoreProps["keyPassword"]
             }
         }
     }

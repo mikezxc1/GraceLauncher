@@ -1091,4 +1091,20 @@
     <string name="clock_rotate_above_primary">旋转主要区域上方的区域</string>
     <string name="clock_rotate_primary">旋转主要区域</string>
     <string name="clock_rotate_all">旋转所有区域</string>
+    <string name="backup_title">备份与恢复</string>
+    <string name="backup_section_export">导出</string>
+    <string name="backup_export">保存备份</string>
+    <string name="backup_export_summary">把布局、图标、设置和字体写到一个文件里</string>
+    <string name="backup_section_restore">恢复</string>
+    <string name="backup_restore">加载备份</string>
+    <string name="backup_restore_summary">用备份文件替换当前的设置</string>
+    <string name="backup_note">备份就是一个普通的 zip 文件，里面装着你的布局、改过的应用名、图标包选择、时钟设置和导入的字体。不会上传到任何地方。</string>
+    <string name="backup_confirm_title">替换当前设置？</string>
+    <string name="backup_confirm_body">你现在配好的一切都会被备份内容覆盖。如果恢复中途失败，会自动退回原来的状态。</string>
+    <string name="backup_confirm_action">恢复</string>
+    <string name="backup_result_title">备份结果</string>
+    <string name="backup_restart_now">立即重启</string>
+    <string name="close">关闭</string>
+    <string name="settings_backup">备份与恢复</string>
+    <string name="settings_backup_summary">保存或载入你的设置</string>
 </resources>

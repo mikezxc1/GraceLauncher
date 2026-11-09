@@ -1,13 +1,13 @@
 pluginManagement {
     repositories {
-        // 官方源放前面：阿里云镜像在 Actions 上会偶发 502，
-        // 一旦某个仓库返回错误，Gradle 会把整个仓库禁用并且不回落，
-        // 依赖就全解析失败。所以镜像只能作为最后兜底。
+        // 阿里云放第一位：kotlin-compiler-embeddable 这类构件在官方
+        // repo.maven.apache.org 上是 404，只在镜像里有。
+        // 官方源随后兜底；Gradle 按顺序找，命中即停。
+        maven("https://maven.aliyun.com/repository/public")
+        maven("https://maven.aliyun.com/repository/google")
         google()
         mavenCentral()
         gradlePluginPortal()
-        maven("https://maven.aliyun.com/repository/public")
-        maven("https://maven.aliyun.com/repository/google")
     }
     resolutionStrategy {
         eachPlugin {
@@ -28,10 +28,10 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        google()
-        mavenCentral()
         maven("https://maven.aliyun.com/repository/public")
         maven("https://maven.aliyun.com/repository/google")
+        google()
+        mavenCentral()
     }
 }
 

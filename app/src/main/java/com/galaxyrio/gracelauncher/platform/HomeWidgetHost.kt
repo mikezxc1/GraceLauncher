@@ -70,7 +70,7 @@ class HomeWidgetHostView(context: Context) : AppWidgetHostView(context) {
      */
     override fun updateAppWidget(remoteViews: android.widget.RemoteViews?) {
         android.util.Log.i("GraceWidgetHost", "updateAppWidget rv=" +
-            (remoteViews?.let { it.packageId.toString() + "/" + it.layoutId } ?: "NULL"))
+            (remoteViews?.let { "layoutId=" + it.layoutId } ?: "NULL"))
         super.updateAppWidget(remoteViews)
         android.util.Log.i("GraceWidgetHost", "updateAppWidget done, childCount=" + childCount +
             " measured=" + measuredWidth + "x" + measuredHeight)

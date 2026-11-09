@@ -6,6 +6,12 @@ plugins {
     alias(libs.plugins.aboutlibraries)
 }
 
+
+val keystorePropsFile = rootProject.file("keystore.properties")
+val keystoreProps = java.util.Properties().apply {
+    if (keystorePropsFile.exists()) keystorePropsFile.inputStream().use { load(it) }
+}
+
 android {
     namespace = "com.galaxyrio.gracelauncher"
     compileSdk = 37
@@ -21,11 +27,25 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("mike") {
+            if (keystoreProps.isNotEmpty()) {
+                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
     buildTypes {
         release {
             optimization {
                 enable = true
             }
+            signingConfig = if (keystoreProps.isNotEmpty()) signingConfigs.getByName("mike") else null
+        }
+        debug {
+            signingConfig = if (keystoreProps.isNotEmpty()) signingConfigs.getByName("mike") else null
         }
     }
     compileOptions {

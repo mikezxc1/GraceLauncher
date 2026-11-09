@@ -63,7 +63,7 @@ data class ClockFaceStyle(
     fun normalized(layout: ClockLayout = ClockLayout.SingleLine) = copy(
         fontId = fontId.takeIf { layout.allowsCustomFont },
         weight = weight.coerceIn(100, maxWeight(layout)),
-        size = size.coerceIn(32, 144),
+        size = size.coerceIn(12, 144),
         letterSpacing = letterSpacing.coerceIn(-16, 16),
         hourMinuteSpacing = hourMinuteSpacing.coerceIn(-16, 64),
         fontShadow = fontShadow.coerceIn(0, 24),

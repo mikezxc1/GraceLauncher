@@ -76,14 +76,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 internal enum class SettingsPage {
-    Root, Productivity, Clock, ClockStyle, Calendar, CalendarSources, CalendarApp, Weather, WeatherApp, Themes, Advanced, Language, About, HiddenApps, Folders, FolderEditor,
+    Root, Productivity, Clock, ClockStyle, Calendar, CalendarSources, CalendarApp, Weather, Themes, Advanced, Language, About, HiddenApps, Folders, FolderEditor,
     Changelog, Licenses, AppLicense, IconPacks, IconDesigner, IconDesignerApp, PrivateSpace, PrivateSpaceEditor, Search,
     MediaPlayer, GraceButton, GraceAction, GraceApp, GraceShortcut, GraceFolder, Gestures, WorkProfile, WorkProfileEditor,
     LabGraceButton, LabGesture, LabPopup, LabAccessibility, LabDismiss, Fonts, FontColors, ListAppearance, Alphabet, ShortcutsFolders, AppStacks,
     GraceButtonAppearance, GraceButtonPosition, AgendaAppearance, SearchAppearance, MediaPlayerAppearance,
     WidgetScreen, WidgetScreenEditor, Homepage, AppList, FeedScreen, StatusScreen, DigitalWellbeing, TabletsFoldables,
     Wallpaper, WallpaperDesigner,
-    AppCategories, CategoryEditor, TasksOrg, TaskLists,
+    AppCategories, CategoryEditor, TasksOrg, TaskLists, Backup,
 }
 
 /** The window's existing system-bar owner follows the active settings surface. */
@@ -299,9 +299,7 @@ fun LauncherSettingsScreen(
                                 }
                             })
                     }
-                    SettingsPage.Weather -> WeatherSettings(uiState, actions, back,
-                        onChooseApp = { navigate(SettingsPage.WeatherApp) })
-                    SettingsPage.WeatherApp -> WeatherAppSettings(uiState, actions, back)
+                    SettingsPage.Weather -> WeatherSettings(uiState, actions, back)
                     SettingsPage.Themes -> ThemeSettings(uiState, actions, back,
                         onClockStyle = { navigate(SettingsPage.ClockStyle) }, onIconPacks = { navigate(SettingsPage.IconPacks) },
                         onFonts = { navigate(SettingsPage.Fonts) }, onListAppearance = { navigate(SettingsPage.ListAppearance) },
@@ -362,6 +360,7 @@ fun LauncherSettingsScreen(
                     SettingsPage.LabAccessibility -> LabAccessibilitySettings(uiState, actions, back)
                     SettingsPage.LabDismiss -> LabDismissSettings(uiState, actions, back)
                     SettingsPage.About -> AboutSettings(back, navigate)
+                    SettingsPage.Backup -> BackupSettings(back)
                     SettingsPage.HiddenApps -> HiddenAppsSettings(uiState, actions, back)
                     SettingsPage.PrivateSpace -> ProfileSettingsScreen(uiState, actions, back) { navigate(SettingsPage.PrivateSpaceEditor) }
                     SettingsPage.WorkProfile -> ProfileSettingsScreen(uiState, actions, back, work = true) { navigate(SettingsPage.WorkProfileEditor) }
@@ -418,6 +417,7 @@ private fun SettingsHome(
         SettingsPage.Themes to LauncherSymbol.Palette,
         SettingsPage.Advanced to LauncherSymbol.Settings,
         SettingsPage.Language to LauncherSymbol.Language,
+        SettingsPage.Backup to LauncherSymbol.Encrypted,
         SettingsPage.About to LauncherSymbol.Info,
     )
     SettingsScaffold(stringResource(R.string.settings_title), "settings_root", onBack) { padding ->
@@ -434,6 +434,7 @@ private fun SettingsHome(
                         SettingsPage.Themes -> R.string.settings_themes
                         SettingsPage.Advanced -> R.string.settings_advanced
                         SettingsPage.Language -> R.string.settings_language
+                        SettingsPage.Backup -> R.string.settings_backup
                         else -> R.string.settings_about
                     }
                     val summary = when (page) {
@@ -441,6 +442,7 @@ private fun SettingsHome(
                         SettingsPage.Themes -> stringResource(R.string.settings_themes_summary)
                         SettingsPage.Advanced -> stringResource(R.string.settings_advanced_summary)
                         SettingsPage.Language -> appLanguageSummary(languageTag)
+                        SettingsPage.Backup -> stringResource(R.string.settings_backup_summary)
                         else -> stringResource(R.string.settings_about_summary)
                     }
                     SettingsActionItem(

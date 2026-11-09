@@ -137,7 +137,7 @@ internal fun LazyListScope.clockRegionSettings(
                 "clock_font_selector", enabled = enabled) { onFont(primary) }
         }
         primaryControls += ClockControl("size") { index, count ->
-            ClockSlider(stringResource(R.string.clock_size), face.size, defaults.size, 32..144, 1,
+            ClockSlider(stringResource(R.string.clock_size), face.size, defaults.size, 12..144, 1,
                 index, count, "clock_size", enabled) { value -> changeFace(primary) { it.copy(size = value) } }
         }
         primaryControls += ClockControl("weight") { index, count ->

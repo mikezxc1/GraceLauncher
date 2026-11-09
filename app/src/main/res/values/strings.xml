@@ -297,9 +297,6 @@
     <string name="themed_icons">Themed icons</string>
     <string name="themed_icons_description">For apps with a monochrome icon</string>
     <string name="your_agenda">Your agenda</string>
-    <string name="agenda_undated_tasks">No due date</string>
-    <string name="agenda_days_ago">%1$dd ago</string>
-    <string name="tasks_no_unfinished">No unfinished tasks</string>
     <string name="today">today</string>
     <string name="new_event">New event</string>
     <string name="calendar_permission_description">Connect your calendar to show upcoming events. Your agenda stays on this device.</string>
@@ -670,8 +667,7 @@
     <string name="weather_settings_forecast_days">Forecast days</string>
     <string name="weather_mode_location_update_notifier">Location Update Notifier</string>
     <string name="weather_mode_gadgetbridge">Gadgetbridge</string>
-    <string name="weather_gadgetbridge_setup">Breezy Weather: Enable Gadgetbridge sharing, select Grace Launcher, and refresh the weather.</string>
-    <string name="weather_gadgetbridge_weathermaster_setup">WeatherMaster: Enable Gadgetbridge sharing and background updates, then set a default location.</string>
+    <string name="weather_gadgetbridge_setup">Enable Gadgetbridge sharing in your weather app. If it asks for a receiving app, select Grace Launcher, then refresh the weather. New data appears here automatically.</string>
     <string name="weather_gadgetbridge_waiting">Waiting for weather data.</string>
     <string name="weather_gadgetbridge_loading">Loading saved weather…</string>
     <string name="weather_gadgetbridge_unavailable">Saved weather could not be read. Refresh the weather in the connected app to send a new update.</string>
@@ -679,9 +675,6 @@
     <string name="weather_temperature_unit">Temperature unit</string>
     <string name="weather_temperature_celsius">Celsius (°C)</string>
     <string name="weather_temperature_fahrenheit">Fahrenheit (°F)</string>
-    <string name="weather_app">App to open</string>
-    <string name="weather_default_app">Breezy Weather (default)</string>
-    <string name="weather_choose_app_description">Choose which app opens when you tap the weather.</string>
     <plurals name="weather_settings_days_value">
         <item quantity="one">%1$d day</item>
         <item quantity="other">%1$d days</item>
@@ -1129,4 +1122,20 @@
     <string name="clock_rotate_all">Rotate all regions</string>
     <string name="home_pull_protection">Accidental swipe protection</string>
     <string name="home_pull_protection_summary">Prevents accidental activation while scrolling. Pull again at the list edge, then release to activate.</string>
+    <string name="backup_title">Backup and restore</string>
+    <string name="backup_section_export">Export</string>
+    <string name="backup_export">Save backup</string>
+    <string name="backup_export_summary">Write layout, icons, settings and fonts to a file</string>
+    <string name="backup_section_restore">Restore</string>
+    <string name="backup_restore">Load backup</string>
+    <string name="backup_restore_summary">Replace current setup with a backup file</string>
+    <string name="backup_note">A backup is a plain zip file. It holds your layout, renamed apps, icon pack choice, clock settings and imported fonts. Nothing is uploaded anywhere.</string>
+    <string name="backup_confirm_title">Replace current setup?</string>
+    <string name="backup_confirm_body">Everything you configured now will be overwritten by the backup. If restoring fails, the previous state is put back automatically.</string>
+    <string name="backup_confirm_action">Restore</string>
+    <string name="backup_result_title">Backup result</string>
+    <string name="backup_restart_now">Restart now</string>
+    <string name="close">Close</string>
+    <string name="settings_backup">Backup and restore</string>
+    <string name="settings_backup_summary">Save or load your setup</string>
 </resources>

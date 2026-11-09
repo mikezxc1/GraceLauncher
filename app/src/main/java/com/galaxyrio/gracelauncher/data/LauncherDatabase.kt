@@ -172,6 +172,13 @@ abstract class LauncherDatabase : RoomDatabase() {
 
         @Volatile private var instance: LauncherDatabase? = null
 
+        fun closeInstance() {
+            synchronized(this) {
+                instance?.close()
+                instance = null
+            }
+        }
+
         val Migration5To6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE launcher_settings ADD COLUMN clockStyleJson TEXT DEFAULT NULL")

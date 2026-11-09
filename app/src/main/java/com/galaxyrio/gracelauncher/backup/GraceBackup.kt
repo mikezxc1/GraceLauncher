@@ -316,9 +316,11 @@ object GraceBackup {
                 val saved = File(noBackupDir, name)
                 if (saved.isFile) saved.copyTo(File(context.noBackupFilesDir, name), overwrite = true)
             }
-            File(iconsSnapshot).listFiles()?.forEach { saved ->
+            iconsSnapshot.listFiles()?.forEach { saved ->
                 if (saved.isFile) {
-                    saved.copyTo(File(context.filesDir, ICON_DIR + "/" + saved.name), overwrite = true)
+                    val target = File(File(context.filesDir, ICON_DIR), saved.name)
+                    target.parentFile?.mkdirs()
+                    saved.copyTo(target, overwrite = true)
                 }
             }
             LauncherDatabase.closeInstance()

@@ -1143,4 +1143,6 @@
     <string name="tasks_no_unfinished">No unfinished tasks</string>
     <string name="weather_app">App to open</string>
     <string name="weather_choose_app_description">Choose the app to open when tapping the weather.</string>
+    <string name="weather_default_app">Breezy Weather (default)</string>
+    <string name="weather_gadgetbridge_weathermaster_setup">WeatherMaster: enable Gadgetbridge sharing and background updates, then set a default location.</string>
 </resources>

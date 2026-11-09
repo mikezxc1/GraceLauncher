@@ -1197,6 +1197,7 @@ internal fun LauncherScreen(
                 onEditingChange = { editingWidgetScreen = it },
                 onEdit = { editingWidgetScreen = false; overlay = LauncherOverlay.SettingsDestination("WidgetScreenEditor") },
                 onLaunchApp = onLaunchApp, onAppDetails = { overlay = LauncherOverlay.AppDetails(it) },
+                onAppShortcuts = openAppPopup,
                 onOpenFolder = openFolder)
             }
            }
@@ -1211,6 +1212,7 @@ internal fun LauncherScreen(
             notificationsFor = { uiState.notificationPreviewsFor(it) },
             appStackContent = { stack -> AppStack(stack, uiState,
                 onLaunch = { app, bounds -> actions.launchAppAt?.invoke(app, bounds) ?: onLaunchApp(app) },
+                onOpenPopup = { app, bounds -> openAppPopup(app, bounds) },
                 onDetails = { overlay = LauncherOverlay.AppDetails(it, fromAppList = true) }, onEdit = { editFolder(stack) },
                 modifier = Modifier.padding(horizontal = (8f - com.galaxyrio.gracelauncher.data.AppStackInset).dp, vertical = 4.dp)) },
             listState = drawerState,
@@ -1302,7 +1304,13 @@ internal fun LauncherScreen(
                 statusBarHeight.value, bottomInset.value)
             GraceButton(settings = uiState.settings.graceButton, editing = editingHome && !drawerOpen,
                 size = buttonBounds.size.dp,
-                artwork = uiState.graceButtonApp?.icon.takeIf { GraceButtonIcon.key in uiState.itemIcons },
+                // 只在选了自定义图片/图标包时才传 artwork。
+                // 内置建议图标（g/搜索/列表/电源/闪电/铃铛/加号）走矢量线条那一路，
+                // 那条路不画任何底色，按钮才是真正全透的。
+                artwork = uiState.graceButtonApp?.icon.takeIf {
+                    GraceButtonIcon.key in uiState.itemIcons &&
+                        uiState.itemIcons[GraceButtonIcon.key]?.kind != "symbol"
+                },
                 design = GraceButtonIcon.choice(uiState.itemIcons[GraceButtonIcon.key]).design ?: GraceButtonIcon.defaults,
                 enabled = overlay == null && !systemActionAccess && buttonTransition == null,
                 hidden = searchTransition != null || drawerTransition != null,

@@ -263,7 +263,8 @@ fun ShortcutPopup(
             when {
                 stack != null -> AppStack(stack, uiState, onLaunch = { item, bounds ->
                     onLaunchItem(item, bounds); if (!isPrivateFolder) onDismiss()
-                }, onDetails = onDetails, onEdit = { onDetails(uiState.folderItem(stack)) },
+                }, onOpenPopup = onOpenAppPopup,
+                    onDetails = onDetails, onEdit = { onDetails(uiState.folderItem(stack)) },
                     enabled = !reveal.dragging && reveal.expanded,
                     iconSize = 36.dp, onWallpaper = false,
                     modifier = Modifier.padding(horizontal = (12f - com.galaxyrio.gracelauncher.data.AppStackInset).dp, vertical = 4.dp))

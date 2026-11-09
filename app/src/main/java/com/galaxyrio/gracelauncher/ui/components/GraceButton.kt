@@ -192,16 +192,18 @@ internal fun GraceButtonArtwork(artwork: ImageBitmap?, design: IconDesign, size:
         }
     }
     Surface(modifier.size(size), shape = if (editing) CircleShape else shape,
-        color = if (editing) MaterialTheme.colorScheme.primaryContainer
-            else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+        // 非编辑态完全透明：不要圆底、不要淡色。只画图标本身。
+        // 编辑态给个可见的底，否则用户找不到按钮在哪。
+        color = if (editing) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+            else Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        shadowElevation = if (!editing && design.shape == IconShape.None) 0.dp else 2.dp * (size / 54.dp)) {
+        // 全透明状态下不能有阴影，否则边缘会出现一圈发灰的轮廓。
+        shadowElevation = if (editing) 2.dp * (size / 54.dp) else 0.dp) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             if (!editing && artwork != null) {
-                // 不能铺满：图标包里的图自带不透明底色，fillMaxSize 会把
-                // 25% 半透明的背景整个盖住，看起来就成了实心圆。
-                // 缩到六成放在中间，四周留一圈，玻璃感才透得出来。
-                Image(artwork, null, Modifier.fillMaxSize(0.6f).clip(CircleShape))
+                // 背景已改为全透明，这里直接用图片本身、按原尺寸铺开。
+                // 图片自带底色的话会显示成实心，那是图片自身的属性，不是背景。
+                Image(artwork, null, Modifier.fillMaxSize())
             } else {
                 Icon(
                     painterResource(if (editing) R.drawable.ms_check else R.drawable.ic_grace_solid),

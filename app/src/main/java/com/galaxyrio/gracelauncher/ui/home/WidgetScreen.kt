@@ -68,6 +68,7 @@ internal fun WidgetScreen(
     editing: Boolean, enabled: Boolean, onEditingChange: (Boolean) -> Unit, onEdit: () -> Unit,
     onLaunchApp: (LauncherApp) -> Unit, onAppDetails: (LauncherApp) -> Unit,
     onOpenFolder: (LauncherFolder, Rect) -> Unit,
+    onAppShortcuts: (LauncherApp, Rect) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val title = stringResource(R.string.widget_screen_title)
@@ -269,6 +270,7 @@ internal fun WidgetScreen(
                             val stack = stacks[cell.key]
                             if (stack != null) AppStack(stack, uiState,
                                 onLaunch = { item, bounds -> actions.launchAppAt?.invoke(item, bounds) ?: onLaunchApp(item) },
+                                onOpenPopup = onAppShortcuts,
                                 onDetails = onAppDetails, onEdit = { onAppDetails(uiState.folderItem(stack)) },
                                 enabled = enabled && !grid.busy, gridManaged = true,
                                 expanded = cell.key in expandedStacks,

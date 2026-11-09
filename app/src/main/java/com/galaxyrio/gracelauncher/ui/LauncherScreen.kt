@@ -90,6 +90,7 @@ import com.galaxyrio.gracelauncher.MainActivity
 import com.galaxyrio.gracelauncher.WidgetSetupActivity
 import com.galaxyrio.gracelauncher.data.LauncherApp
 import com.galaxyrio.gracelauncher.data.icons.GraceButtonIcon
+import com.galaxyrio.gracelauncher.data.icons.IconBackgroundCutter
 import com.galaxyrio.gracelauncher.data.LauncherFolder
 import com.galaxyrio.gracelauncher.data.LauncherShortcut
 import com.galaxyrio.gracelauncher.data.PrivateSpaceDisplay
@@ -1302,15 +1303,19 @@ internal fun LauncherScreen(
         if (!editingWidgetScreen && !editingHomeContent && ((!drawerOpen && editingHome) || uiState.settings.graceButton.isVisible(drawerOpen))) {
             val buttonBounds = uiState.settings.graceButton.layout.bounds(maxWidth.value, maxHeight.value,
                 statusBarHeight.value, bottomInset.value)
+            // 只在选了自定义图片/图标包时才用图片，内置建议图标走矢量线条（本身无底）。
+            // 图片往往自带一块实心底，这里做一次抠底，把底色去掉、只留图形。
+            // 抠底要遍历全部像素，必须缓存，否则每帧重算会卡。
+            val rawArtwork = uiState.graceButtonApp?.icon.takeIf {
+                GraceButtonIcon.key in uiState.itemIcons &&
+                    uiState.itemIcons[GraceButtonIcon.key]?.kind != "symbol"
+            }
+            val cutArtwork = remember(rawArtwork) {
+                rawArtwork?.let { IconBackgroundCutter.cut(it) }
+            }
             GraceButton(settings = uiState.settings.graceButton, editing = editingHome && !drawerOpen,
                 size = buttonBounds.size.dp,
-                // 只在选了自定义图片/图标包时才传 artwork。
-                // 内置建议图标（g/搜索/列表/电源/闪电/铃铛/加号）走矢量线条那一路，
-                // 那条路不画任何底色，按钮才是真正全透的。
-                artwork = uiState.graceButtonApp?.icon.takeIf {
-                    GraceButtonIcon.key in uiState.itemIcons &&
-                        uiState.itemIcons[GraceButtonIcon.key]?.kind != "symbol"
-                },
+                artwork = cutArtwork,
                 design = GraceButtonIcon.choice(uiState.itemIcons[GraceButtonIcon.key]).design ?: GraceButtonIcon.defaults,
                 enabled = overlay == null && !systemActionAccess && buttonTransition == null,
                 hidden = searchTransition != null || drawerTransition != null,

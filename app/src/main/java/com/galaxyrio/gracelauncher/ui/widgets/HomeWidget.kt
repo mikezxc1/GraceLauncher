@@ -52,6 +52,24 @@ internal class WidgetHostState(val host: HomeWidgetHost) {
     var revision by mutableIntStateOf(0)
 }
 
+/**
+ * 主动让 provider 重新生成一次内容。
+ *
+ * 时序问题：组件绑定成功后系统会在几秒内推送一次 RemoteViews，
+ * 但桌面此时往往还没创建 AppWidgetHostView，那次推送没有接收方就丢了。
+ * 视图建好之后补发一次更新广播，provider 会重新构造内容并推给宿主，
+ * 这次视图已经在宿主的缓存里，能正常显示。
+ */
+private fun requestProviderRefresh(context: android.content.Context, id: Int, provider: android.content.ComponentName) {
+    runCatching {
+        val intent = android.content.Intent(android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE).apply {
+            component = provider
+            putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(id))
+        }
+        context.sendBroadcast(intent)
+    }.onFailure { Log.w("GraceWidgetHost", "refresh broadcast failed id=" + id, it) }
+}
+
 internal val LocalWidgetHost = staticCompositionLocalOf<WidgetHostState?> { null }
 
 /** Only one listener per Activity/host ID, shared by HOME and pop-up widgets. */
@@ -166,7 +184,13 @@ internal fun HomeWidget(
                         Log.e("GraceWidgetHost", "create failed id=${layout.widgetId} provider=${layout.widgetProvider}", it)
                         creationFailed = true; HomeWidgetHostView(context)
                     }
-                    .also { view = it }
+                    .also { created ->
+                        view = created
+                        // 视图已建好，主动催 provider 重推一次内容。
+                        // 系统在绑定后几秒内就推过一次，那时视图还没建，内容丢了；
+                        // 现在视图已在宿主的缓存里，重推的内容能正确落地。
+                        requestProviderRefresh(context, layout.widgetId, widget.info.provider)
+                    }
             },
             update = {
                 it.onWidgetLongPress = if (editGesturesEnabled) ({ latestLongPress() }) else null

@@ -192,8 +192,7 @@ internal fun GraceButtonArtwork(artwork: ImageBitmap?, design: IconDesign, size:
     }
     Surface(modifier.size(size), shape = if (editing) CircleShape else shape,
         color = if (editing) MaterialTheme.colorScheme.primaryContainer
-            else if (artwork == null) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
-            else Color.Transparent,
+            else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         shadowElevation = if (!editing && design.shape == IconShape.None) 0.dp else 2.dp * (size / 54.dp)) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

@@ -28,9 +28,6 @@ import com.galaxyrio.gracelauncher.ui.components.LauncherSymbol
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * 备份与恢复页面。
@@ -52,21 +49,17 @@ internal fun BackupSettings(onBack: () -> Unit) {
     var pendingRestore by remember { mutableStateOf<android.net.Uri?>(null) }
     var restoreDone by remember { mutableStateOf(false) }
 
-    /** 备份文件名：Grace-备份-年月日-时分.glb，一眼能看出是什么时候的。 */
-    val suggestedName = remember {
-        val stamp = SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(Date())
-        "Grace-$stamp.${GraceBackup.EXTENSION}"
-    }
-
-    val exporter = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument(GraceBackup.MIME)
-    ) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        busy = true
-        scope.launch {
-            val result = withContext(Dispatchers.IO) { GraceBackup.export(context, uri) }
-            busy = false
-            message = result.message
+    // 导出不再经过系统文件选择器：ColorOS 上 CreateDocument 可能返回目录型 Uri，
+    // openOutputStream 拿到 null 就写不进去。改成应用自己写进下载目录，
+    // 不需要任何权限，也不需要用户选位置，路径会显示在结果里。
+    val exportNow: () -> Unit = {
+        if (!busy) {
+            busy = true
+            scope.launch {
+                val result = withContext(Dispatchers.IO) { GraceBackup.export(context) }
+                busy = false
+                message = result.message
+            }
         }
     }
 
@@ -86,7 +79,7 @@ internal fun BackupSettings(onBack: () -> Unit) {
                     index = 0, count = 1, tag = "backup_export",
                     enabled = !busy,
                     leading = { LauncherIcon(LauncherSymbol.Encrypted) },
-                ) { exporter.launch(suggestedName) }
+                ) { exportNow() }
             }
 
             item { SettingsHeading(stringResource(R.string.backup_section_restore)) }

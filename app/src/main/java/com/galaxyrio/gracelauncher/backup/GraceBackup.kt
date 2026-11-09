@@ -56,11 +56,12 @@ object GraceBackup {
      * 打包前先做一次 WAL checkpoint：Room 默认 WAL 模式，最近的写入还在 -wal 里，
      * 不合并就拷主库，用户恢复后会发现最后几次改动全消失。
      */
-    fun export(context: Context, uri: Uri): Result = runCatching {
+    fun export(context: Context): Result = runCatching {
         checkpoint(context)
         var entries = 0
 
-        context.contentResolver.openOutputStream(uri)?.use { raw ->
+        val target = newBackupFile(context)
+        target.outputStream().buffered().use { raw ->
             ZipOutputStream(raw.buffered()).use { zip ->
                 zip.putNextEntry(ZipEntry(MANIFEST))
                 zip.write(manifest(context).toString(2).toByteArray(Charsets.UTF_8))
@@ -111,10 +112,32 @@ object GraceBackup {
                     }
                 }
             }
-        } ?: return Result(false, "无法写入所选位置")
+        }
 
-        Result(true, "已导出 $entries 个条目", entries)
+        Result(true, "已导出 $entries 个条目\n存到：" + target.absolutePath, entries)
     }.getOrElse { Result(false, "导出失败：" + it.describe()) }
+
+    /**
+     * 选一个备份文件路径，优先系统下载目录。
+     *
+     * 走公共下载目录不需要任何运行时权限，也不经过系统文件选择器，
+     * 避免 ColorOS 返回目录型 Uri 导致写入失败。
+     */
+    private fun newBackupFile(context: Context): File {
+        val stamp = java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.US)
+            .format(java.util.Date())
+        val name = "Grace-" + stamp + "." + EXTENSION
+        val downloads = File(
+            android.os.Environment.getExternalStoragePublicDirectory(
+                android.os.Environment.DIRECTORY_DOWNLOADS
+            ),
+            "Grace备份"
+        )
+        if (downloads.exists() || downloads.mkdirs()) return File(downloads, name)
+        val fallback = File(context.getExternalFilesDir(null) ?: context.filesDir, "backups")
+        fallback.mkdirs()
+        return File(fallback, name)
+    }
 
     // ---------------------------------------------------------------- 恢复
 

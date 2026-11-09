@@ -67,13 +67,18 @@ internal fun rememberWidgetHost(): WidgetHostState {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START -> start()
-                Lifecycle.Event.ON_STOP -> runCatching { host.stopListening() }
+                // 刻意不在 ON_STOP 里 stopListening()：
+                // 回调注册按 hostId 全局唯一，主界面和设置页各自持有宿主实例，
+                // 任一个停下就会把整个 hostId 的回调清空，
+                // 导致组件渲染时被系统判定 "not ready"，界面上显示「无法添加微件」。
+                // 这点内存回收的收益远小于功能损坏的代价，所以不关。
+                Lifecycle.Event.ON_RESUME -> start()
                 else -> Unit
             }
         }
         lifecycle.addObserver(observer)
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) start()
-        onDispose { lifecycle.removeObserver(observer); host.onProvidersUpdated = null; runCatching { host.stopListening() } }
+        onDispose { lifecycle.removeObserver(observer); host.onProvidersUpdated = null }
     }
     return state
 }

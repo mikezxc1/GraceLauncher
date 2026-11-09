@@ -48,14 +48,9 @@ jobs:
       - name: Grant execute permission
         run: chmod +x gradlew
 
-      # 正式版优先：代码精简、资源优化、体积小、无调试开关。
-      # 日常使用装这个。两个构建类型用的是同一把签名，可以互相覆盖安装、数据不丢。
-      - name: Build Release APK
-        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
-
-      # 测试版备用：带调试信息，出问题时能看堆栈。只在正式版失败时才编。
+      # 调试期先出测试版：带完整日志，能看到 app 自己的 Log.i / Log.e。
+      # 两个构建类型用同一把签名，可以和正式版互相覆盖安装、数据不丢。
       - name: Build Debug APK
-        if: failure()
         run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK

@@ -50,8 +50,11 @@ jobs:
 
       # 调试期先出测试版：带完整日志，能看到 app 自己的 Log.i / Log.e。
       # 两个构建类型用同一把签名，可以和正式版互相覆盖安装、数据不丢。
-      - name: Build Debug APK
-        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      # 编 release：官方发布的就是这个，用户验证过官方原版能正常加小组件。
+      # debug 构建带 debuggable 标志、不做 R8 优化，加载第三方 RemoteViews 的路径不同，
+      # 一直是今晚失败的可能原因，这次专门验证。
+      - name: Build Release APK
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

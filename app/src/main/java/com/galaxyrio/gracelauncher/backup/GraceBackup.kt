@@ -24,8 +24,8 @@ import java.util.zip.ZipOutputStream
  *   db/grace_launcher.db                   Room 数据库
  *   db/grace_launcher.db-wal               未合并的写入
  *   db/grace_launcher.db-shm               共享内存索引
- *   no_backup/*.json                       应用缓存与用量统计
- *   fonts/*                                导入的时钟字体
+ *   no_backup 目录下的三个 json             应用缓存与用量统计
+ *   fonts 目录下的字体文件                  导入的时钟字体
  *
  * 不做加密：内容只在本机流动，加密只会让用户出问题时没法手工补救。
  * 恢复前先在 cache 存一份当前状态，出错自动退回。

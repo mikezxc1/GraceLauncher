@@ -91,8 +91,11 @@ class WidgetSetupActivity : AppCompatActivity() {
                 homeSidePadding = settings.listAppearance.sidePadding
                 val current = settings.homeLayout
                 val popupWidgets = itemsRepository.snapshots.first().popups.values.flatten().mapNotNull { it.widget?.widgetId }.toSet()
-                // Only discard this host's abandoned setup IDs; never touch the saved widget.
-                host.appWidgetIds.filter { it != current.widgetId && it != pendingId && it !in popupWidgets && !host.isPendingId(it) }.forEach(host::deleteAppWidgetId)
+                // 这里原本有一段「清理孤儿 widgetId」的逻辑，已移除。
+                // 原因：它依赖 popupWidgets 判断哪些组件还在用，但读数据库是异步的，
+                // 执行到这一行时集合往往还是空的，于是把已经保存好的组件全删了。
+                // 表现就是：widgets.size 一直是 1，数据库却存着多个 ID，渲染时找不到组件。
+                // 孤儿 ID 只占几百字节，留着不影响任何东西；误删组件才是真故障。
                 if (pendingId >= 0) {
                     if ((current.widgetId == pendingId || pendingId in popupWidgets) && !configuringExisting) { host.untrackPendingId(pendingId); pendingId = -1; finish() }
                     else if (savedInstanceState?.getBoolean("saving", false) == true) finishAdding()

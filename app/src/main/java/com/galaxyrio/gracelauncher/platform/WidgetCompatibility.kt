@@ -75,5 +75,15 @@ internal fun initialWidgetOptions(context: Context, info: AppWidgetProviderInfo,
         (homeSidePadding.coerceIn(8, 80) * 2 + 20f) else 64f).coerceAtLeast(1f)
     val width = info.widthBounds(horizontal * density, density, available.toInt().coerceAtLeast(1))
     val height = info.heightBounds(vertical * density, density, 1600, 48)
-    return widgetSizeOptions(width.max - horizontal, height.initial - vertical)
+
+    // widgetSizeOptions 要的是 dp，而 widthBounds/heightBounds 算出来的是「格数」。
+    // 直接把格数当 dp 用，会让高组件拿到远小于自身最小高度的值，
+    // 系统在绑定校验时直接拒绝，界面上显示「无法添加微件」。
+    // 所以这里用组件声明的最小尺寸兜底，保证不会低于它的下限。
+    val screenHeightDp = context.resources.configuration.screenHeightDp.toFloat().coerceAtLeast(1f)
+    val widthDp = width.max.toFloat().coerceAtLeast(info.minWidth.toFloat())
+    val heightDp = height.initial.toFloat().coerceAtLeast(info.minHeight.toFloat())
+        .coerceAtMost(screenHeightDp * 0.72f)
+
+    return widgetSizeOptions(widthDp - horizontal, heightDp - vertical)
 }

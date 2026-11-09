@@ -145,14 +145,36 @@ class WidgetSetupActivity : AppCompatActivity() {
             Log.i(TAG, "bind id=$pendingId provider=$expectedProvider profile=$expectedProfile " +
                 "min=${info.minWidth}x${info.minHeight} resizeMode=${info.resizeMode} configure=${info.configure} " +
                 "size=${options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)}x${options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)}")
-            if (manager.bindAppWidgetIdIfAllowed(pendingId, info.profile, info.provider, options)) configure()
-            else startActivityForResult(Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
+            if (manager.bindAppWidgetIdIfAllowed(pendingId, info.profile, info.provider, options)) {
+                // 绑定是异步落地的，立刻查会拿到 null。
+                // 等它真正进入系统列表再继续，否则后面的 configure 一定失败。
+                awaitBound(pendingId) { configure() }
+                return
+            }
+            startActivityForResult(Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingId)
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, info.provider)
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, info.profile)
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_OPTIONS, options)
             }, REQUEST_BIND)
         } catch (error: Exception) { fail(R.string.widget_bind_error, error) }
+    }
+
+    /**
+     * 等系统把这个 widget 真正登记完成。
+     *
+     * bindAppWidgetIdIfAllowed 返回 true 只代表「申请被接受」，
+     * 系统内部还要把 widget 加进自己的列表，这个过程是异步的。
+     * 立刻去查 getAppWidgetInfo 会得到 null，后面就会判成「组件不可用」。
+     */
+    private fun awaitBound(id: Int, attempt: Int = 0, then: () -> Unit) {
+        val info = runCatching { manager.getAppWidgetInfo(id) }.getOrNull()
+        if (info != null) { then(); return }
+        if (attempt >= 30 || isFinishing || isDestroyed) {
+            fail(R.string.widget_bind_error)
+            return
+        }
+        window.decorView.postDelayed({ awaitBound(id, attempt + 1, then) }, 100L)
     }
 
     private fun configure() {

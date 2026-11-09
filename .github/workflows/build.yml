@@ -19,9 +19,6 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -31,25 +28,30 @@ jobs:
           key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: gradle-
 
+      - name: Install Android SDK
+        run: |
+          set -x
+          export ANDROID_HOME="$HOME/android-sdk"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          mkdir -p "$ANDROID_HOME/cmdline-tools"
+          cd /tmp
+          curl -fsSL -o tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q tools.zip -d "$ANDROID_HOME/cmdline-tools"
+          mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platform-tools" "platforms;android-37" "build-tools;36.1.0"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+
       - name: Grant execute permission
         run: chmod +x gradlew
 
-      - name: Install SDK 37 and Build Tools 36.1.0
-        run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager --install "platforms;android-37" "build-tools;36.1.0" || true
-
       - name: Build Debug APK
         run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
-
-      - name: Build Release APK
-        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
-        continue-on-error: true
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: grace-launcher-apk
-          path: |
-            app/build/outputs/apk/**/*.apk
+          path: app/build/outputs/apk/**/*.apk
           retention-days: 30

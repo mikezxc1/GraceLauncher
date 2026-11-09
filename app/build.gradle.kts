@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -8,13 +10,11 @@ plugins {
 
 
 val keystorePropsFile = rootProject.file("keystore.properties")
-val keystoreProps: Map<String, String> = if (keystorePropsFile.exists()) {
-    val holder = java.util.Properties()
-    keystorePropsFile.inputStream().use { holder.load(it) }
-    holder.entries.associate { it.key.toString() to it.value.toString() }
-} else {
-    emptyMap()
+val keystoreProps = Properties()
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.inputStream().use { stream -> keystoreProps.load(stream) }
 }
+val hasSigning = keystoreProps.getProperty("storeFile") != null
 
 android {
     namespace = "com.galaxyrio.gracelauncher"
@@ -33,11 +33,11 @@ android {
 
     signingConfigs {
         create("mike") {
-            if (keystoreProps.isNotEmpty()) {
-                storeFile = rootProject.file(keystoreProps["storeFile"])
-                storePassword = keystoreProps["storePassword"]
-                keyAlias = keystoreProps["keyAlias"]
-                keyPassword = keystoreProps["keyPassword"]
+            if (hasSigning) {
+                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
             }
         }
     }
@@ -46,10 +46,10 @@ android {
             optimization {
                 enable = true
             }
-            signingConfig = if (keystoreProps.isNotEmpty()) signingConfigs.getByName("mike") else null
+            signingConfig = if (hasSigning) signingConfigs.getByName("mike") else null
         }
         debug {
-            signingConfig = if (keystoreProps.isNotEmpty()) signingConfigs.getByName("mike") else null
+            signingConfig = if (hasSigning) signingConfigs.getByName("mike") else null
         }
     }
     compileOptions {

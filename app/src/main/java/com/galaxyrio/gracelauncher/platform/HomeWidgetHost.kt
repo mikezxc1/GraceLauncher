@@ -15,11 +15,7 @@ class HomeWidgetHost(context: Context) : AppWidgetHost(context, HOST_ID) {
     var onProvidersUpdated: (() -> Unit)? = null
 
     override fun onCreateView(context: Context, appWidgetId: Int, appWidget: AppWidgetProviderInfo): AppWidgetHostView =
-        HomeWidgetHostView(context).also {
-            // 诊断：记录创建时刻的基本信息，确认视图本身正常
-            android.util.Log.i("GraceWidgetHost", "onCreateView id=" + appWidgetId +
-                " cls=" + it.javaClass.simpleName + " info=" + (appWidget.provider?.flattenToString() ?: "null"))
-        }
+        HomeWidgetHostView(context)
 
     override fun onProvidersChanged() { onProvidersUpdated?.invoke() }
     override fun onAppWidgetRemoved(appWidgetId: Int) { super.onAppWidgetRemoved(appWidgetId); onProvidersUpdated?.invoke() }
@@ -62,19 +58,6 @@ class HomeWidgetHostView(context: Context) : AppWidgetHostView(context) {
     }
 
     init { isClickable = true }
-
-    /**
-     * 诊断用：把系统塞进来的内容对象记录下来。
-     * applyContent 失败时系统只打一行 getErrorView，看不到原因，
-     * 这里至少能确认「内容到底有没有来、来的是什么」。
-     */
-    override fun updateAppWidget(remoteViews: android.widget.RemoteViews?) {
-        android.util.Log.i("GraceWidgetHost", "updateAppWidget rv=" +
-            (remoteViews?.let { "layoutId=" + it.layoutId } ?: "NULL"))
-        super.updateAppWidget(remoteViews)
-        android.util.Log.i("GraceWidgetHost", "updateAppWidget done, childCount=" + childCount +
-            " measured=" + measuredWidth + "x" + measuredHeight)
-    }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         if (held) {

@@ -67,18 +67,13 @@ internal fun rememberWidgetHost(): WidgetHostState {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START -> start()
-                // 刻意不在 ON_STOP 里 stopListening()：
-                // 回调注册按 hostId 全局唯一，主界面和设置页各自持有宿主实例，
-                // 任一个停下就会把整个 hostId 的回调清空，
-                // 导致组件渲染时被系统判定 "not ready"，界面上显示「无法添加微件」。
-                // 这点内存回收的收益远小于功能损坏的代价，所以不关。
-                Lifecycle.Event.ON_RESUME -> start()
+                Lifecycle.Event.ON_STOP -> runCatching { host.stopListening() }
                 else -> Unit
             }
         }
         lifecycle.addObserver(observer)
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) start()
-        onDispose { lifecycle.removeObserver(observer); host.onProvidersUpdated = null }
+        onDispose { lifecycle.removeObserver(observer); host.onProvidersUpdated = null; runCatching { host.stopListening() } }
     }
     return state
 }
@@ -120,16 +115,6 @@ internal fun HomeWidget(
     var coordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var view by remember(layout.widgetId) { mutableStateOf<HomeWidgetHostView?>(null) }
     var creationFailed by remember(layout.widgetId, widget.info) { mutableStateOf(false) }
-    // 内容可能在视图建好之前就推送过了，那次应用会失败。
-    // 延迟重建一次视图，宿主会把缓存的内容重新套上，多半就能成功。
-    // 只重试一次，避免无限循环。
-    var retryToken by remember(layout.widgetId) { mutableStateOf(0) }
-    LaunchedEffect(layout.widgetId, retryToken) {
-        if (retryToken == 0 && widget.info != null) {
-            kotlinx.coroutines.delay(2000)
-            retryToken = 1
-        }
-    }
     val scale = contentScale.coerceIn(.5f, 1.5f)
     // The slot never changes size. Measure RemoteViews in inverse-scaled space,
     // then scale its entire contents (including touch coordinates) into that slot.
@@ -166,7 +151,7 @@ internal fun HomeWidget(
             shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer) {
             Text(stringResource(R.string.widget_unavailable), Modifier.padding(20.dp))
         }
-    } else key(layout.widgetId, widget.info.provider, retryToken) {
+    } else key(layout.widgetId, widget.info.provider) {
         AndroidView(
             modifier = modifier,
             factory = { context ->
@@ -176,9 +161,7 @@ internal fun HomeWidget(
                         Log.e("GraceWidgetHost", "create failed id=${layout.widgetId} provider=${layout.widgetProvider}", it)
                         creationFailed = true; HomeWidgetHostView(context)
                     }
-                    .also { created ->
-                        view = created
-                    }
+                    .also { view = it }
             },
             update = {
                 it.onWidgetLongPress = if (editGesturesEnabled) ({ latestLongPress() }) else null

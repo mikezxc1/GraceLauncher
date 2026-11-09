@@ -4,7 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -24,7 +24,7 @@ import com.galaxyrio.gracelauncher.ui.LauncherAppTheme
 import com.galaxyrio.gracelauncher.ui.LauncherViewModel
 
 /** Android sends authenticated pin requests to this activity in the default HOME package. */
-class PinItemActivity : AppCompatActivity() {
+class PinItemActivity : ComponentActivity() {
     private val model: PinItemViewModel by viewModels()
     private val themeModel: LauncherViewModel by viewModels()
 

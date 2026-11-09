@@ -3,6 +3,8 @@ package com.galaxyrio.gracelauncher.ui.overlays
 import androidx.compose.animation.core.Animatable
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -291,6 +293,33 @@ fun ShortcutPopup(
                             Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(if (isFolder) "folder_app:${itemApp.key}" else "shortcut:${itemApp.shortcut?.id ?: itemApp.key}")
                                 .semantics { if (!showNames && !hiddenIcon) contentDescription = itemApp.label }
                                 .clip(RoundedCornerShape(16.dp))
+                                // 横向滑动：打开这个应用自己的快捷弹窗。
+                                // 文件夹弹窗内的应用、应用弹窗内的应用都走同一段。
+                                // 只认横向位移超过阈值且纵向位移很小的手势，
+                                // 避免和弹窗本身的纵向滚动抢事件。
+                                .then(
+                                    if (onOpenAppPopup != null && itemApp.folderId == null) {
+                                        Modifier.pointerInput(itemApp.key, reveal.dragging, reveal.expanded) {
+                                            var totalX = 0f
+                                            var totalY = 0f
+                                            var fired = false
+                                            detectDragGestures(
+                                                onDragStart = { totalX = 0f; totalY = 0f; fired = false },
+                                                onDragEnd = {},
+                                                onDragCancel = {},
+                                            ) { change, dragAmount ->
+                                                change.consume()
+                                                totalX += dragAmount.x
+                                                totalY += dragAmount.y
+                                                if (!fired && kotlin.math.abs(totalX) > 72f &&
+                                                    kotlin.math.abs(totalY) < kotlin.math.abs(totalX) * 0.6f) {
+                                                    fired = true
+                                                    onOpenAppPopup.invoke(itemApp, iconBounds)
+                                                }
+                                            }
+                                        }
+                                    } else Modifier
+                                )
                                 .combinedClickable(enabled = !reveal.dragging && reveal.expanded, onLongClick = { onDetails(itemApp) }, onClick = {
                                     onLaunchItem(itemApp, iconBounds)
                                     // A folder replaces this panel with its own hero transition.

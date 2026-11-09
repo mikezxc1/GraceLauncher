@@ -18,13 +18,13 @@ val hasSigning = keystoreProps.getProperty("storeFile") != null
 
 android {
     namespace = "com.galaxyrio.gracelauncher"
-    compileSdk = 36
+    compileSdk = 37
     buildToolsVersion = "36.1.0"
 
     defaultConfig {
         applicationId = "com.galaxyrio.gracelauncher"
         minSdk = 28
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 15
         versionName = "1.2.3"
 

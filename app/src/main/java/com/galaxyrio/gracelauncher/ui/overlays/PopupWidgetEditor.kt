@@ -150,16 +150,18 @@ internal fun PopupWidgetItem(
         // 这样父级排版不受影响，内容却能画进 LazyColumn 的左右 padding 区域。
         // 前提是 placeWithLayer 必须 clip = false，否则超出部分会被裁掉。
         val bleedPx = with(LocalDensity.current) { bleedDp.roundToPx() }
-        val targetWidthPx = with(LocalDensity.current) { width.dp.roundToPx() }
-        val targetWidth = (width + bleedDp * 2).coerceAtMost(360f)
-        val targetWidthPxFinal = with(LocalDensity.current) { targetWidth.dp.roundToPx() }
+        // width 是 Float（dp 值），bleedDp 是 Dp，两者不能直接相加。
+        // 统一用 Dp 运算：width.dp + bleedDp*2，结果类型是 Dp。
+        val targetWidth = (width.dp + bleedDp * 2).coerceAtMost(360.dp)
+        val targetWidthPxFinal = with(LocalDensity.current) { targetWidth.roundToPx() }
+        val reportedWidthPx = with(LocalDensity.current) { width.dp.roundToPx() }
         val targetHeightPx = with(LocalDensity.current) { height.dp.roundToPx() }
         Box(Modifier.testTag("popup_widget:${layout.widgetId}")
             .layout { measurable, constraints ->
                 val placeable = measurable.measure(Constraints(
                     minWidth = targetWidthPxFinal, maxWidth = targetWidthPxFinal,
                     minHeight = targetHeightPx, maxHeight = targetHeightPx))
-                layout(constraints.maxWidth.coerceAtMost(targetWidthPx), targetHeightPx) {
+                layout(constraints.maxWidth.coerceAtMost(reportedWidthPx), targetHeightPx) {
                     placeable.placeWithLayer(-bleedPx, 0) { clip = false }
                 }
             }
@@ -167,7 +169,7 @@ internal fun PopupWidgetItem(
             // width 用「目标宽」而不是 fillMaxSize：父级只给了 268dp，
             // 但 layout 里我们已按 316dp 测量，这里必须同步用 316dp，
             // 否则内容仍会被填成 268dp，出血白做。
-            Box(Modifier.width(targetWidth.dp).height(height.dp).clip(RoundedCornerShape(16.dp))
+            Box(Modifier.width(targetWidth).height(height.dp).clip(RoundedCornerShape(16.dp))
                 .background(if (layout.popupBackground) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)) {
                 HomeWidget(layout, hosted, height, editing = selected, enabled = enabled, editGesturesEnabled = editable,
                     hapticsEnabled = haptics, onLongPress = {},

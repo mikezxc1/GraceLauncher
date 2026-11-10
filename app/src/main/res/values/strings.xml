@@ -816,6 +816,7 @@
     <string name="popup_widget_full_width">Full width</string>
     <string name="popup_widget_background">Background</string>
     <string name="popup_widget_content_scale">Content scale · %1$d%%</string>
+    <string name="popup_widget_corner">Corner radius · %1$d dp</string>
     <string name="widget_adjust_up">Move up / decrease height</string>
     <string name="widget_adjust_down">Move down / increase height</string>
     <string name="widget_calendar">Calendar</string>

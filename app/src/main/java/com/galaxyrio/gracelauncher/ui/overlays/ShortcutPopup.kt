@@ -372,7 +372,10 @@ internal fun SwipeRevealPanel(
 ) {
     val windowSize = LocalWindowInfo.current.containerSize
     val density = LocalDensity.current
-    val margin = with(density) { 32.dp.roundToPx() }
+    // 2026-11-10 改：面板左右留白从 32dp 降到 12dp。
+    // 原来是固定 32dp，这台机器 480dpi 下等于 96px，两侧共 192px，
+    // 相当于屏幕宽度的 17.8% 全被留白吃掉，组件想拉宽也拉不动。
+    val margin = with(density) { 12.dp.roundToPx() }
     val maxListHeight = with(density) { windowSize.height.toDp() } * 0.55f
     val currentOnDismiss by rememberUpdatedState(onDismiss)
     val haptics by rememberUpdatedState(LocalHapticFeedback.current)
@@ -437,7 +440,11 @@ internal fun SwipeRevealPanel(
                 }
             },
         ) { measurables, constraints ->
-            val panelWidth = (constraints.maxWidth - margin * 2).coerceIn(1, 440.dp.roundToPx())
+            // 2026-11-10 改：宽度上限从写死的 440dp 放开为「窗口宽度减两侧留白」。
+            // 440dp 是原作者的保守值，这个值落在 1080px 屏上只有约 61% 屏宽，
+            // 组件宽度一旦被它封死，里面再怎么调都拉不宽。
+            // 现在上限跟着屏幕走：面板最多占满整屏宽度减去 12dp×2 的留白。
+            val panelWidth = (constraints.maxWidth - margin * 2).coerceAtLeast(1)
             // Measure content at its final size: only the container/clip morphs,
             // so neither text nor icons are stretched during the hero transition.
             val panel = measurables[1].measure(Constraints(

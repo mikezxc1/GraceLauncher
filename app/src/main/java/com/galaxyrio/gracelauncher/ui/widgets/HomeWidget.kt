@@ -7,11 +7,13 @@ import android.util.Log
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.geometry.Offset
@@ -67,13 +69,18 @@ internal fun rememberWidgetHost(): WidgetHostState {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START -> start()
-                Lifecycle.Event.ON_STOP -> runCatching { host.stopListening() }
+                // 刻意不在 ON_STOP 里 stopListening()：
+                // 回调注册按 hostId 全局唯一，主界面和设置页各自持有宿主实例，
+                // 任一个停下就会把整个 hostId 的回调清空，
+                // 导致组件渲染时被系统判定 "not ready"，界面上显示「无法添加微件」。
+                // 这点内存回收的收益远小于功能损坏的代价，所以不关。
+                Lifecycle.Event.ON_RESUME -> start()
                 else -> Unit
             }
         }
         lifecycle.addObserver(observer)
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) start()
-        onDispose { lifecycle.removeObserver(observer); host.onProvidersUpdated = null; runCatching { host.stopListening() } }
+        onDispose { lifecycle.removeObserver(observer); host.onProvidersUpdated = null }
     }
     return state
 }
@@ -105,6 +112,8 @@ internal fun HomeWidget(
     contentScale: Float = 1f,
     removeHorizontalPadding: Boolean = false,
     editGesturesEnabled: Boolean = true,
+    /** 2026-11-10 新增：圆角半径（dp）。null 表示不裁剪，保持改前行为。 */
+    cornerRadiusDp: Float? = null,
 ) = WidgetLongPressConfiguration {
     val density = LocalDensity.current.density
     val latestLongPress by rememberUpdatedState(onLongPress)
@@ -116,9 +125,19 @@ internal fun HomeWidget(
     var view by remember(layout.widgetId) { mutableStateOf<HomeWidgetHostView?>(null) }
     var creationFailed by remember(layout.widgetId, widget.info) { mutableStateOf(false) }
     val scale = contentScale.coerceIn(.5f, 1.5f)
+    // 2026-11-10：圆角裁剪。只在调用方显式传入时生效，默认 null 表示行为与改前完全一致。
+    // 为什么用裁剪而不是画圆角背景：几何天气这类组件的卡片是它自己 RemoteViews 画的，
+    // 宿主改不了它的背景。把宿主内容整体裁成圆角，是唯一能改变卡片角部观感的办法。
+    val corner = cornerRadiusDp
+    val cornerModifier = if (corner != null && corner > 0f)
+        Modifier.clip(RoundedCornerShape(corner.dp))
+    else Modifier
     // The slot never changes size. Measure RemoteViews in inverse-scaled space,
     // then scale its entire contents (including touch coordinates) into that slot.
-    val modifier = Modifier.fillMaxWidth().height(height.dp).clipToBounds().onSizeChanged { size = it }.layout { measurable, constraints ->
+    // 顺序很关键：必须先 clipToBounds（方框）再 clip（圆角）。
+    // 反过来写，方框会把圆角盖掉，视觉上圆角等于没生效。
+    val modifier = Modifier.fillMaxWidth().height(height.dp).clipToBounds()
+        .then(cornerModifier).onSizeChanged { size = it }.layout { measurable, constraints ->
         val width = constraints.maxWidth
         val outerHeight = constraints.maxHeight
         val child = measurable.measure(Constraints.fixed(

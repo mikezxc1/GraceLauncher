@@ -396,7 +396,12 @@ fun HomeScreen(
                         }
                         widget != null -> PopupWidgetItem(widget, selected = selectedWidget == entry.key,
                             enabled = inputEnabled, editable = !homeLayout.editingLocked, haptics = uiState.settings.allowHapticFeedback,
-                            horizontalInset = 8.dp,
+                            // 2026-11-10 改：组件项左右留白从 18dp 降到 0dp。
+                            // 这一项是「拉不宽」的直接原因：面板已经吃满屏宽后，
+                            // 组件还要再往里缩 18dp×2，加上列表右侧给滚动条的余量，
+                            // 最终能画的宽度比面板窄了一大截。
+                            // 降到 0 后组件与面板边缘齐平，配合圆角裁剪正好贴合。
+                            horizontalInset = 0.dp,
                             maxHeight = 1600,
                             onChange = { layout, save -> updateWidget(entry.key, layout, save) },
                             onResizing = { resizing = it }, onDragStart = { startDrag(entry.key) },

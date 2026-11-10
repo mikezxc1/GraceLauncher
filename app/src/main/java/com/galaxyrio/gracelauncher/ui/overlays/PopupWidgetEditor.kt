@@ -73,6 +73,16 @@ internal fun PopupWidgetControls(
                 onValueChangeFinished = { onChange(layout, true) }, valueRange = 50f..150f,
                 modifier = Modifier.weight(1f).testTag("popup_widget_scale"))
         }
+        // 2026-11-10 新增：圆角滑块。
+        // 只对小组件生效，不影响应用图标行——因为裁剪是加在小组件宿主的 Modifier 上的。
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.popup_widget_corner, layout.popupWidgetCornerDp),
+                modifier = Modifier.widthIn(max = 112.dp), style = MaterialTheme.typography.labelMedium)
+            Slider(value = layout.popupWidgetCornerDp.toFloat(),
+                onValueChange = { onChange(layout.copy(popupWidgetCornerDp = it.roundToInt()), false) },
+                onValueChangeFinished = { onChange(layout, true) }, valueRange = 0f..48f,
+                modifier = Modifier.weight(1f).testTag("popup_widget_corner"))
+        }
     }
 }
 
@@ -124,7 +134,8 @@ internal fun PopupWidgetItem(
                     hapticsEnabled = haptics, onLongPress = {},
                     onDragStart = { _, _ -> currentStart() },
                     onDrag = { _, y -> currentDrag(y) }, onDragEnd = { currentEnd(it) },
-                    contentScale = layout.popupContentScale / 100f, removeHorizontalPadding = layout.popupFullWidth)
+                    contentScale = layout.popupContentScale / 100f, removeHorizontalPadding = layout.popupFullWidth,
+                    cornerRadiusDp = layout.popupWidgetCornerDp.toFloat())
             }
             if (selected) {
                 // The native child is disabled while selected. Only this widget's

@@ -14,6 +14,15 @@ data class HomeLayout(
     val popupFullWidth: Boolean = false,
     val popupBackground: Boolean = false,
     val popupContentScale: Int = 100,
+    /**
+     * 2026-11-10 新增：弹窗内小组件的圆角半径（dp）。
+     *
+     * 为什么需要它：几何天气这类组件的卡片是它自己 RemoteViews 画的圆角，
+     * 宿主改不了它内部的背景。要知道，它画的是 4dp 左右的直角小圆角，
+     * 而用户要的是和面板一致的 16~24dp 大圆角。
+     * 唯一可行的办法是把宿主内容整体裁成圆角，边角随之被切掉。
+     */
+    val popupWidgetCornerDp: Int = 16,
     /** Null reads the legacy header/widget/favorites arrangement until the first edit. */
     val homeOrder: List<String>? = null,
     val baselineEnabled: Boolean = true,
@@ -39,6 +48,7 @@ data class HomeLayout(
         put("popupFullWidth", popupFullWidth)
         put("popupBackground", popupBackground)
         put("popupContentScale", popupContentScale.coerceIn(50, 150))
+        put("popupWidgetCornerDp", popupWidgetCornerDp.coerceIn(0, 48))
         homeOrder?.let { put("homeOrder", org.json.JSONArray(normalizeHomeOrder(it))) }
         put("baselineEnabled", baselineEnabled)
         put("clockCalendarEnabled", clockCalendarEnabled)
@@ -59,6 +69,7 @@ data class HomeLayout(
                 popupFullWidth = data.optBoolean("popupFullWidth", false),
                 popupBackground = data.optBoolean("popupBackground", false),
                 popupContentScale = data.optInt("popupContentScale", 100).coerceIn(50, 150),
+                popupWidgetCornerDp = data.optInt("popupWidgetCornerDp", 16).coerceIn(0, 48),
                 homeOrder = data.optJSONArray("homeOrder")?.let { array ->
                     normalizeHomeOrder((0 until array.length()).mapNotNull { (array.opt(it) as? String)?.takeIf(String::isNotBlank) })
                 },

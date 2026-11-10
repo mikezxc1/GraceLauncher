@@ -201,7 +201,9 @@ internal fun PopupWidgetItem(
                         ) { change, _ ->
                             val root = coordinates?.localToRoot(change.position) ?: change.position
                             change.consume()
-                            currentDrag(root.y - previous.y)
+                            // 2026-11-11：签名改成 (dx, dy) 后这里要补上 dx。
+                            // 选中态下压住组件的这层拖拽只用于纵向重排，dx 传 0。
+                            currentDrag(0f, root.y - previous.y)
                             previous = root
                         }
                     }

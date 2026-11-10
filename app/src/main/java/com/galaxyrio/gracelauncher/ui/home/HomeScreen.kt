@@ -200,6 +200,11 @@ fun HomeScreen(
     // 2026-11-11 新增：桌面组件拖拽时的横向实时位移（dp）。
     // 只对小组件这一行生效，松手时写回 widget.homeOffsetXDp 并归零。
     var dragOffsetX by remember { mutableFloatStateOf(0f) }
+    // 2026-11-11 新增：拖拽方向判定的累计位移与锁定状态。
+    // dragAxis：0 = 未判定，1 = 横向（只改位置），2 = 纵向（走列表重排）
+    var totalXD by remember { mutableFloatStateOf(0f) }
+    var totalYD by remember { mutableFloatStateOf(0f) }
+    var dragAxis by remember { mutableIntStateOf(0) }
     val drafts = remember { mutableStateMapOf<String, HomeLayout>() }
     val updateWidget: (String, HomeLayout, Boolean) -> Unit = { key, layout, save ->
         drafts[key] = layout
@@ -352,30 +357,21 @@ fun HomeScreen(
                     .pointerInput(grace, inputEnabled, homeLayout.editingLocked) {
                         if (grace != null && grace != GraceWidget.Baseline && inputEnabled && !homeLayout.editingLocked) {
                             var previous = Offset.Zero
-                            // 2026-11-11 新增：小组件专属的二维拖拽。
-                            // 核心判据：横向累计位移超过纵向，就认定为「横拖调位置」，
-                            // 此时不再向列表重排提交纵向变化，避免一边横移一边乱换行。
-                            // 松手时把最终横向位移写回 widget.homeOffsetXDp 并清零实时值。
-                            val isWidget = widget != null
-                            var totalX = 0f
-                            var totalY = 0f
-                            var horizontalMode = false
                             detectDragGesturesAfterLongPress(
                                 onDragStart = {
                                     previous = coordinates?.localToRoot(it) ?: it
-                                    totalX = 0f; totalY = 0f; horizontalMode = false
-                                    dragOffsetX = 0f
+                                    dragOffsetX = 0f; totalXD = 0f; totalYD = 0f; dragAxis = 0
                                     currentStart(entry.key)
                                 },
                                 onDragEnd = {
-                                    if (horizontalMode && isWidget) {
+                                    if (dragAxis == 1 && widget != null) {
                                         latestOffsetX(entry.key, widgetXState + dragOffsetX)
-                                        dragOffsetX = 0f
                                     }
+                                    dragOffsetX = 0f; totalXD = 0f; totalYD = 0f; dragAxis = 0
                                     reorder.finish(false)
                                 },
                                 onDragCancel = {
-                                    dragOffsetX = 0f
+                                    dragOffsetX = 0f; totalXD = 0f; totalYD = 0f; dragAxis = 0
                                     reorder.finish(true)
                                 },
                             ) { change, _ ->
@@ -383,12 +379,13 @@ fun HomeScreen(
                                 val dx = root.x - previous.x
                                 val dy = root.y - previous.y
                                 change.consume()
-                                totalX += dx; totalY += dy
-                                // 一旦纵向领先就锁定为纵向模式，不再改判，避免抖动
-                                if (!horizontalMode && isWidget && kotlin.math.abs(totalX) > kotlin.math.abs(totalY) * 1.5f && kotlin.math.abs(totalX) > 12f) {
-                                    horizontalMode = true
+                                totalXD += dx; totalYD += dy
+                                // 2026-11-11：方向判定带锁定，一旦横向领先就只调位置，不再换行。
+                                if (dragAxis == 0 && widget != null &&
+                                    kotlin.math.abs(totalXD) > kotlin.math.abs(totalYD) * 1.5f && kotlin.math.abs(totalXD) > 12f) {
+                                    dragAxis = 1
                                 }
-                                if (horizontalMode && isWidget) {
+                                if (dragAxis == 1) {
                                     dragOffsetX = (dragOffsetX + dx).coerceIn(-160f, 160f)
                                 } else {
                                     currentDrag(dy)
@@ -455,8 +452,37 @@ fun HomeScreen(
                             horizontalBleed = 24.dp,
                             maxHeight = 1600,
                             onChange = { layout, save -> updateWidget(entry.key, layout, save) },
-                            onResizing = { resizing = it }, onDragStart = { startDrag(entry.key) },
-                            onDrag = drag, onDragEnd = { cancelled ->
+                            onResizing = { resizing = it }, onDragStart = { dragOffsetX = 0f; dragged = false; reorder.start(entry.key) },
+                            // 2026-11-11 新增：桌面组件二维拖拽的真正入口。
+                            //
+                            // 上一版失败的原因：PopupWidgetItem 的 onDrag 签名只有 (Float)，
+                            // 这里写 { _, y -> drag(y) } 把底层给出的 dx 直接丢掉了。
+                            // 结果「横向优先」的判定永远拿不到横向位移，左右永远卡死。
+                            //
+                            // 现在的判定：
+                            //   横向累计 |totalX| > 纵向 |totalY| × 1.5 且 > 12dp → 锁定横向模式
+                            //   锁定后只改 dragOffsetX，不再向列表重排提交 dy
+                            //   未锁定前 dy 照常走重排，保证上下换行手感不变
+                            onDrag = { dx, dy ->
+                                if (dx != 0f || dy != 0f) dragged = true
+                                totalXD += dx; totalYD += dy
+                                // 双阈值：方向占比 + 绝对距离，避免手指微抖就切换模式
+                                if (dragAxis == 0 && kotlin.math.abs(totalXD) > kotlin.math.abs(totalYD) * 1.5f && kotlin.math.abs(totalXD) > 12f) {
+                                    dragAxis = 1
+                                }
+                                if (dragAxis == 1) {
+                                    dragOffsetX = (dragOffsetX + dx).coerceIn(-160f, 160f)
+                                } else {
+                                    reorder.drag(dy)
+                                }
+                            },
+                            onDragEnd = { cancelled ->
+                                // 横向模式松手 → 把实时位移写回持久字段
+                                if (dragAxis == 1) {
+                                    val base = widget?.homeOffsetXDp ?: 0f
+                                    latestOffsetX(entry.key, base + dragOffsetX)
+                                }
+                                dragOffsetX = 0f; totalXD = 0f; totalYD = 0f; dragAxis = 0
                                 reorder.finish(cancelled)
                                 if (!cancelled && !homeLayout.editingLocked) selectedWidget = entry.key
                             })

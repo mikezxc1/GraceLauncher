@@ -93,7 +93,13 @@ internal fun PopupWidgetControls(
 internal fun PopupWidgetItem(
     layout: HomeLayout, selected: Boolean, enabled: Boolean, haptics: Boolean,
     maxHeight: Int, onChange: (HomeLayout, Boolean) -> Unit,
-    onDragStart: () -> Unit, onDrag: (Float) -> Unit, onDragEnd: (Boolean) -> Unit,
+    // 2026-11-11 改：onDrag 由 (Float) 改成 (Float, Float)，同时带上 dx 和 dy。
+    //
+    // 这是「左右拖不动」的根因。底层 HomeWidgetHostView 的 onWidgetDrag
+    // 本来就同时给出了 (rawX差, rawY差)，但这一层签名只收一个 Float，
+    // 调用处写成 { _, y -> ... } 把 x 直接丢掉了。
+    // 所以横向位移从头到尾没被消费过，判定「横向优先」的条件永远不成立。
+    onDragStart: () -> Unit, onDrag: (Float, Float) -> Unit, onDragEnd: (Boolean) -> Unit,
     onResizing: (Boolean) -> Unit,
     horizontalInset: Dp = 18.dp,
     editable: Boolean = true,
@@ -174,7 +180,9 @@ internal fun PopupWidgetItem(
                 HomeWidget(layout, hosted, height, editing = selected, enabled = enabled, editGesturesEnabled = editable,
                     hapticsEnabled = haptics, onLongPress = {},
                     onDragStart = { _, _ -> currentStart() },
-                    onDrag = { _, y -> currentDrag(y) }, onDragEnd = { currentEnd(it) },
+                    // 2026-11-11：把 dx 和 dy 都往下传，不再丢掉 x。
+                    // 原来写 { _, y -> currentDrag(y) }，横向位移在这里被吞掉。
+                    onDrag = { dx, dy -> currentDrag(dx, dy) }, onDragEnd = { currentEnd(it) },
                     contentScale = layout.popupContentScale / 100f, removeHorizontalPadding = layout.popupFullWidth,
                     cornerRadiusDp = layout.popupWidgetCornerDp.toFloat())
             }

@@ -197,6 +197,9 @@ fun HomeScreen(
     var selectedWidget by rememberSaveable { mutableStateOf<String?>(null) }
     var resizing by remember { mutableStateOf(false) }
     var dragged by remember { mutableStateOf(false) }
+    // 2026-11-11 新增：桌面组件拖拽时的横向实时位移（dp）。
+    // 只对小组件这一行生效，松手时写回 widget.homeOffsetXDp 并归零。
+    var dragOffsetX by remember { mutableFloatStateOf(0f) }
     val drafts = remember { mutableStateMapOf<String, HomeLayout>() }
     val updateWidget: (String, HomeLayout, Boolean) -> Unit = { key, layout, save ->
         drafts[key] = layout
@@ -205,6 +208,13 @@ fun HomeScreen(
         }
     }
     val saveWidget by rememberUpdatedState(updateWidget)
+    // 2026-11-11 新增：拖拽时实时更新横向偏移（dp）。
+    // 放在 updateWidget 之后定义，Kotlin 局部变量不支持前向引用。
+    val applyOffsetX: (String, Float) -> Unit = { key, dx ->
+        val current = drafts[key] ?: entries.firstOrNull { it.key == key }?.widget
+        if (current != null) updateWidget(key, current.copy(homeOffsetXDp = dx.coerceIn(-160f, 160f)), false)
+    }
+    val latestOffsetX by rememberUpdatedState(applyOffsetX)
     val finishEditing = {
         selectedWidget?.let { key -> drafts[key]?.let { saveWidget(key, it, true) } }
         selectedWidget = null
@@ -326,26 +336,64 @@ fun HomeScreen(
                 var coordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
                 val currentStart by rememberUpdatedState(startDrag)
                 val currentDrag by rememberUpdatedState(drag)
+                // 2026-11-11：桌面上组件的横向偏移。
+                // 只有小组件这一行应用它，其他行（时钟、应用、文件夹）保持左对齐不变。
+                // 拖拽中额外叠加拖拽位移，松手后归位到 widget.homeOffsetXDp。
+                val widgetX = (widget?.homeOffsetXDp ?: 0f)
+                val dragX = if (widget != null && reorder.draggingKey == entry.key) dragOffsetX else 0f
+                val widgetXState by rememberUpdatedState(widgetX)
                 Box(Modifier.fillMaxWidth()
                     .then(if (dragging) Modifier else Modifier.animateItem())
                     .zIndex(if (dragging || reorder.drop?.key == entry.key) 1f else 0f)
-                    .graphicsLayer { translationY = offset }
+                    .graphicsLayer { translationY = offset; translationX = if (widget != null) widgetX.dp.toPx() + dragX else 0f }
                     .onGloballyPositioned { coordinates = it }
                     .onSizeChanged { itemHeights[entry.key] = it.height }
                     .testTag("home_item:${entry.key}")
                     .pointerInput(grace, inputEnabled, homeLayout.editingLocked) {
                         if (grace != null && grace != GraceWidget.Baseline && inputEnabled && !homeLayout.editingLocked) {
                             var previous = Offset.Zero
+                            // 2026-11-11 新增：小组件专属的二维拖拽。
+                            // 核心判据：横向累计位移超过纵向，就认定为「横拖调位置」，
+                            // 此时不再向列表重排提交纵向变化，避免一边横移一边乱换行。
+                            // 松手时把最终横向位移写回 widget.homeOffsetXDp 并清零实时值。
+                            val isWidget = widget != null
+                            var totalX = 0f
+                            var totalY = 0f
+                            var horizontalMode = false
                             detectDragGesturesAfterLongPress(
                                 onDragStart = {
                                     previous = coordinates?.localToRoot(it) ?: it
+                                    totalX = 0f; totalY = 0f; horizontalMode = false
+                                    dragOffsetX = 0f
                                     currentStart(entry.key)
                                 },
-                                onDragEnd = { reorder.finish(false) },
-                                onDragCancel = { reorder.finish(true) },
+                                onDragEnd = {
+                                    if (horizontalMode && isWidget) {
+                                        latestOffsetX(entry.key, widgetXState + dragOffsetX)
+                                        dragOffsetX = 0f
+                                    }
+                                    reorder.finish(false)
+                                },
+                                onDragCancel = {
+                                    dragOffsetX = 0f
+                                    reorder.finish(true)
+                                },
                             ) { change, _ ->
                                 val root = coordinates?.localToRoot(change.position) ?: change.position
-                                change.consume(); currentDrag(root.y - previous.y); previous = root
+                                val dx = root.x - previous.x
+                                val dy = root.y - previous.y
+                                change.consume()
+                                totalX += dx; totalY += dy
+                                // 一旦纵向领先就锁定为纵向模式，不再改判，避免抖动
+                                if (!horizontalMode && isWidget && kotlin.math.abs(totalX) > kotlin.math.abs(totalY) * 1.5f && kotlin.math.abs(totalX) > 12f) {
+                                    horizontalMode = true
+                                }
+                                if (horizontalMode && isWidget) {
+                                    dragOffsetX = (dragOffsetX + dx).coerceIn(-160f, 160f)
+                                } else {
+                                    currentDrag(dy)
+                                }
+                                previous = root
                             }
                         }
                     }) {
@@ -396,12 +444,15 @@ fun HomeScreen(
                         }
                         widget != null -> PopupWidgetItem(widget, selected = selectedWidget == entry.key,
                             enabled = inputEnabled, editable = !homeLayout.editingLocked, haptics = uiState.settings.allowHapticFeedback,
-                            // 2026-11-10 改：组件项左右留白从 18dp 降到 0dp。
-                            // 这一项是「拉不宽」的直接原因：面板已经吃满屏宽后，
-                            // 组件还要再往里缩 18dp×2，加上列表右侧给滚动条的余量，
-                            // 最终能画的宽度比面板窄了一大截。
-                            // 降到 0 后组件与面板边缘齐平，配合圆角裁剪正好贴合。
+                            // 2026-11-11 改：桌面上的组件向外出血 24dp，吃掉列表内边距的一部分。
+                            //
+                            // 桌面 LazyColumn 的左右内边距合计 92dp
+                            // （startPadding = sidePadding-8 = 36dp，endPadding = sidePadding+12 = 56dp），
+                            // 360dp 宽的屏上组件只剩 268dp。出血 24dp 后可用宽度变 316dp，
+                            // 占屏从 74.4% 提升到 87.8%，两侧各留 22dp 视觉呼吸。
+                            // 注意：出血是从「内容区」往外扩，不会盖住状态栏或导航栏。
                             horizontalInset = 0.dp,
+                            horizontalBleed = 24.dp,
                             maxHeight = 1600,
                             onChange = { layout, save -> updateWidget(entry.key, layout, save) },
                             onResizing = { resizing = it }, onDragStart = { startDrag(entry.key) },

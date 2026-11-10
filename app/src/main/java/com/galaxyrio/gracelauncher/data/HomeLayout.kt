@@ -15,6 +15,15 @@ data class HomeLayout(
     val popupBackground: Boolean = false,
     val popupContentScale: Int = 100,
     /**
+     * 2026-11-11 新增：桌面上的组件横向偏移（dp）。
+     *
+     * 由来：用户要求「长按进入编辑后可以随意拖拽位置」。
+     * 原来的拖拽只能上下换行（列表重排），左右不可动。
+     * 这个字段记横向位移，配合 topOffsetDp 就能二维摆放。
+     * 范围 -160~160，超出的部分会被裁掉，所以限制在合理区间。
+     */
+    val homeOffsetXDp: Float = 0f,
+    /**
      * 2026-11-10 新增：弹窗内小组件的圆角半径（dp）。
      *
      * 为什么需要它：几何天气这类组件的卡片是它自己 RemoteViews 画的圆角，
@@ -48,6 +57,7 @@ data class HomeLayout(
         put("popupFullWidth", popupFullWidth)
         put("popupBackground", popupBackground)
         put("popupContentScale", popupContentScale.coerceIn(50, 150))
+        put("homeOffsetXDp", homeOffsetXDp.takeIf { it.isFinite() }?.coerceIn(-160f, 160f) ?: 0f)
         put("popupWidgetCornerDp", popupWidgetCornerDp.coerceIn(0, 48))
         homeOrder?.let { put("homeOrder", org.json.JSONArray(normalizeHomeOrder(it))) }
         put("baselineEnabled", baselineEnabled)
@@ -69,6 +79,7 @@ data class HomeLayout(
                 popupFullWidth = data.optBoolean("popupFullWidth", false),
                 popupBackground = data.optBoolean("popupBackground", false),
                 popupContentScale = data.optInt("popupContentScale", 100).coerceIn(50, 150),
+                homeOffsetXDp = data.optDouble("homeOffsetXDp", 0.0).toFloat().takeIf { it.isFinite() }?.coerceIn(-160f, 160f) ?: 0f,
                 popupWidgetCornerDp = data.optInt("popupWidgetCornerDp", 16).coerceIn(0, 48),
                 homeOrder = data.optJSONArray("homeOrder")?.let { array ->
                     normalizeHomeOrder((0 until array.length()).mapNotNull { (array.opt(it) as? String)?.takeIf(String::isNotBlank) })

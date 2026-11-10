@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -31,6 +32,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Constraints
 import com.galaxyrio.gracelauncher.R
 import com.galaxyrio.gracelauncher.data.HomeLayout
 import com.galaxyrio.gracelauncher.platform.widthBounds
@@ -95,6 +97,15 @@ internal fun PopupWidgetItem(
     onResizing: (Boolean) -> Unit,
     horizontalInset: Dp = 18.dp,
     editable: Boolean = true,
+    /**
+     * 2026-11-11 新增：向外扩出的量（dp），用来抵消外层容器的左右内边距。
+     *
+     * 为什么需要它：这个组件在桌面列表里被 LazyColumn 的 contentPadding 左右各切一刀，
+     * 桌面 startPadding=36dp、endPadding=56dp，合计 92dp，
+     * 屏宽 360dp 的机器上组件只剩 268dp（占屏 74.4%）。用户要更宽，就得从这里出血。
+     * 用负 padding 不行（Compose 不接受），改用 layout 的 placeWithLayer 向外偏移。
+     */
+    horizontalBleed: Dp = 0.dp,
 ) = WidgetLongPressConfiguration {
     val hosted = rememberHostedWidget(layout)
     val density = LocalDensity.current.density
@@ -112,13 +123,18 @@ internal fun PopupWidgetItem(
     }
     BoxWithConstraints(Modifier.fillMaxWidth().padding(vertical = 8.dp),
         contentAlignment = Alignment.Center) {
-        val available = (maxWidth.value - horizontalInset.value * 2).coerceAtLeast(1f)
+        // 2026-11-11：出血量换算成像素，并把它算进可用宽度。
+        // 打满后组件宽度 = 列表可用宽度 + 出血×2，正好吃掉外层 contentPadding。
+        val bleedDp = horizontalBleed.coerceIn(0.dp, 48.dp)
+        val available = (maxWidth.value - horizontalInset.value * 2 + bleedDp.value * 2).coerceAtLeast(1f)
         val bounds = hosted.info?.widthBounds(((padding?.left ?: 0) + (padding?.right ?: 0)).toFloat(),
             density, available.toInt().coerceAtLeast(1), 64.coerceAtMost(available.toInt().coerceAtLeast(1)))
         val limitWidth = bounds?.max?.toFloat() ?: available
         val minWidth = (bounds?.min?.toFloat() ?: 64f.coerceAtMost(available))
             .coerceAtLeast(available * .2f).coerceAtMost(limitWidth)
-        val width = if (layout.popupFullWidth) maxWidth.value else
+        // 2026-11-11 修正：原来 popupFullWidth 直接取 maxWidth.value（已被外层 padding 限制），
+// 所以「全宽」也全不到哪去。改成取算好的 width，它已经把出血量加进去了。
+        val width = if (layout.popupFullWidth) available.coerceAtMost(limitWidth) else
             (available * layout.popupWidthPercent.coerceIn(20, 100) / 100f).coerceIn(minWidth, limitWidth)
         val limitHeight = maxHeight.coerceIn(48, 1600).coerceAtMost(hosted.maxHeight)
         val minHeight = hosted.minHeight.coerceAtMost(limitHeight)
@@ -126,9 +142,32 @@ internal fun PopupWidgetItem(
         val currentWidth by rememberUpdatedState(width)
         val currentHeight by rememberUpdatedState(height)
         var coordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
-        Box(Modifier.width(width.dp).height(height.dp).testTag("popup_widget:${layout.widgetId}")
+        // 2026-11-11：真正的出血实现，分两步。
+        //
+        // 第一步，算出「视觉目标宽」：可用宽 + 出血×2。桌面场景 268+48 = 316dp。
+        // 第二步用 layout 拦截：把子内容按 316dp 去测量（突破父级 268dp 的约束），
+        // 但只向父级报告 268dp 的占位，再把内容整体左移 24dp。
+        // 这样父级排版不受影响，内容却能画进 LazyColumn 的左右 padding 区域。
+        // 前提是 placeWithLayer 必须 clip = false，否则超出部分会被裁掉。
+        val bleedPx = with(LocalDensity.current) { bleedDp.roundToPx() }
+        val targetWidthPx = with(LocalDensity.current) { width.dp.roundToPx() }
+        val targetWidth = (width + bleedDp * 2).coerceAtMost(360f)
+        val targetWidthPxFinal = with(LocalDensity.current) { targetWidth.dp.roundToPx() }
+        val targetHeightPx = with(LocalDensity.current) { height.dp.roundToPx() }
+        Box(Modifier.testTag("popup_widget:${layout.widgetId}")
+            .layout { measurable, constraints ->
+                val placeable = measurable.measure(Constraints(
+                    minWidth = targetWidthPxFinal, maxWidth = targetWidthPxFinal,
+                    minHeight = targetHeightPx, maxHeight = targetHeightPx))
+                layout(constraints.maxWidth.coerceAtMost(targetWidthPx), targetHeightPx) {
+                    placeable.placeWithLayer(-bleedPx, 0) { clip = false }
+                }
+            }
             .onGloballyPositioned { coordinates = it }) {
-            Box(Modifier.matchParentSize().clip(RoundedCornerShape(16.dp))
+            // width 用「目标宽」而不是 fillMaxSize：父级只给了 268dp，
+            // 但 layout 里我们已按 316dp 测量，这里必须同步用 316dp，
+            // 否则内容仍会被填成 268dp，出血白做。
+            Box(Modifier.width(targetWidth.dp).height(height.dp).clip(RoundedCornerShape(16.dp))
                 .background(if (layout.popupBackground) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)) {
                 HomeWidget(layout, hosted, height, editing = selected, enabled = enabled, editGesturesEnabled = editable,
                     hapticsEnabled = haptics, onLongPress = {},

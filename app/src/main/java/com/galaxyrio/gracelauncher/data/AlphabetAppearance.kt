@@ -7,6 +7,18 @@ data class AlphabetAppearance(
     val fontId: String? = null,
     val fontColor: IconColor? = null,
     val fontSize: Int = 14,
+    /**
+     * 2026-11-11 新增：字母透明度（百分比 0~100，默认 85）。
+     *
+     * 由来：用户要求「让 A 到 Z 字母表能调节透明度」。
+     *
+     * 为什么默认 85 而不是 100：
+     * 改前渲染层把未选中字母硬编码成 alpha=0.85f，选中字母是 1f。
+     * 默认值取 85 保持原观感不变，老用户升级后看不出差别。
+     * 新数值只乘在「未选中」的基准上，选中项仍固定 1f，
+     * 所以选中高亮不会因为透明度调低而一起变淡。
+     */
+    val opacityPercent: Int = 85,
     val indicatorShape: IconShape = IconShape.Circle,
     val pebbleRoundness: Int = IconDesign.DefaultPebbleRoundness,
     val squareCornerRadius: Int = 0,
@@ -25,6 +37,7 @@ data class AlphabetAppearance(
     fun normalized(): AlphabetAppearance {
         val top = topPercent?.coerceIn(0, 99)
         return copy(fontSize = fontSize.coerceIn(10, 28), topPercent = top,
+            opacityPercent = opacityPercent.coerceIn(0, 100),
             bottomPercent = bottomPercent.coerceIn((top ?: 0) + 1, 100),
             rightTouchWidth = rightTouchWidth.coerceIn(28, 56),
             pebbleRoundness = pebbleRoundness.coerceIn(0, 100),
@@ -46,6 +59,7 @@ data class AlphabetAppearance(
     internal fun json(): JSONObject = normalized().let { value -> JSONObject().apply {
         put("fontId", value.fontId ?: JSONObject.NULL); put("fontColor", value.fontColor?.json())
         put("fontSize", value.fontSize); put("indicatorShape", value.indicatorShape.name)
+        put("opacityPercent", value.opacityPercent)
         put("pebbleRoundness", value.pebbleRoundness); put("squareCornerRadius", value.squareCornerRadius)
         put("cookieSides", value.cookieSides); put("topPercent", value.topPercent ?: JSONObject.NULL)
         put("bottomPercent", value.bottomPercent); put("freeMovement", value.freeMovement)
@@ -65,6 +79,7 @@ data class AlphabetAppearance(
                     fontId = it.optString("fontId").takeIf { id -> id.isNotBlank() && id != "null" },
                     fontColor = IconColor.decode(it.optJSONObject("fontColor")),
                     fontSize = it.optInt("fontSize", defaults.fontSize),
+                    opacityPercent = it.optInt("opacityPercent", defaults.opacityPercent),
                     indicatorShape = IconShape.entries.firstOrNull { shape -> shape.name == it.optString("indicatorShape") }
                         ?: defaults.indicatorShape,
                     pebbleRoundness = it.optInt("pebbleRoundness", defaults.pebbleRoundness),

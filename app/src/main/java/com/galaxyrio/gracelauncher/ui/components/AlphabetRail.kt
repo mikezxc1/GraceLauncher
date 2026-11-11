@@ -306,7 +306,14 @@ fun AlphabetRail(
                         },
                     contentAlignment = Alignment.Center,
                 ) {
-                    val color = textColor.copy(alpha = if (isSelected) 1f else 0.85f)
+                    // 2026-11-11 新增：透明度可调。
+                    //
+                    // 改前是 `if (isSelected) 1f else 0.85f`，未选中固定 0.85。
+                    // 现在未选中值改为 opacityPercent/100，默认 85 时与旧版完全一致。
+                    // 选中项仍固定 1f：如果把透明度也乘上去，调到 30% 时选中高亮
+                    // 会一起变淡，反而看不出当前选中哪个字母，丢失了指示功能。
+                    val alpha = if (isSelected) 1f else (alphabet?.opacityPercent ?: 85).coerceIn(0, 100) / 100f
+                    val color = textColor.copy(alpha = alpha)
                     if (letter == null) {
                         LauncherIcon(LauncherSymbol.Star, Modifier.size(18.dp), tint = color)
                     } else if (letter == GraceSection) {

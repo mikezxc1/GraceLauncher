@@ -844,6 +844,7 @@
     <string name="popup_notification_hidden">不显示</string>
     <string name="settings_alphabet">A-Z 字母表</string>
     <string name="alphabet_letter_color">字母颜色</string>
+    <string name="alphabet_opacity">字母透明度</string>
     <string name="alphabet_indicator_shape">指示器形状</string>
     <string name="alphabet_top">上限位置</string>
     <string name="alphabet_bottom">下限位置</string>

@@ -874,6 +874,7 @@
     <string name="popup_notification_hidden">Hide</string>
     <string name="settings_alphabet">A-Z list</string>
     <string name="alphabet_letter_color">Letter color</string>
+    <string name="alphabet_opacity">Letter opacity</string>
     <string name="alphabet_indicator_shape">Indicator shape</string>
     <string name="alphabet_top">Upper position</string>
     <string name="alphabet_bottom">Lower position</string>

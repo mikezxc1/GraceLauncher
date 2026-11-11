@@ -83,6 +83,8 @@ data class ClockAgenda(
     val eventCount: Int = 1,
     val useLatinLetters: Boolean = false,
     val alignment: ClockAlignment = ClockAlignment.Left,
+    /** 2026-11-11 新增：日程区域横向微调（dp），用途同 ClockRegionRow.offsetXDp。 */
+    val offsetXDp: Float = 0f,
 ) {
     val visibleFields: List<ClockAgendaField> get() = normalized().order.filter { it in selected }
 
@@ -101,6 +103,7 @@ data class ClockAgenda(
         put("eventCount", value.eventCount)
         put("useLatinLetters", value.useLatinLetters)
         put("alignment", value.alignment.name)
+        put("offsetXDp", value.offsetXDp.takeIf { it.isFinite() }?.coerceIn(-120f, 120f) ?: 0f)
     } }
 
     companion object {
@@ -121,6 +124,8 @@ data class ClockAgenda(
                 useLatinLetters = json.optBoolean("useLatinLetters", defaults.useLatinLetters),
                 alignment = ClockAlignment.entries.firstOrNull { it.name == json.optString("alignment") }
                     ?: defaults.alignment,
+                offsetXDp = json.optDouble("offsetXDp", 0.0).toFloat()
+                    .takeIf { it.isFinite() }?.coerceIn(-120f, 120f) ?: 0f,
             ).normalized()
         }
     }

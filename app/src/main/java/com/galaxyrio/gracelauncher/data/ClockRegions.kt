@@ -30,6 +30,15 @@ data class ClockRegionRow(
     val useLatinLetters: Boolean = false,
     val fixedClockWidth: Boolean = true,
     val centered: Boolean = false,
+    /**
+     * 2026-11-11 新增：整行横向微调（dp）。
+     *
+     * 由来：用户要求「主页的区域板块都加上水平偏移功能」。
+     * 主要区域（时钟）已经有 primaryOffsetXDp，这一行是同类能力，
+     * 供次要区域与第三区域各自独立使用。
+     * 用 graphicsLayer 平移而非 offset，理由同 primaryOffsetXDp：不动测量。
+     */
+    val offsetXDp: Float = 0f,
 ) {
     val leftItems: List<ClockElement> get() = completeOrder().takeWhile { it != null }.filterNotNull().filter { it in selected }
     val rightItems: List<ClockElement> get() = completeOrder().dropWhile { it != null }.filterNotNull().filter { it in selected }
@@ -52,6 +61,7 @@ data class ClockRegionRow(
             put("useLatinLetters", row.useLatinLetters)
             put("fixedClockWidth", row.fixedClockWidth)
             put("centered", row.centered)
+            put("offsetXDp", row.offsetXDp.takeIf { it.isFinite() }?.coerceIn(-120f, 120f) ?: 0f)
         }
     }
 
@@ -83,6 +93,8 @@ data class ClockRegionRow(
                 useLatinLetters = json.optBoolean("useLatinLetters", defaults.useLatinLetters),
                 fixedClockWidth = json.optBoolean("fixedClockWidth", defaults.fixedClockWidth),
                 centered = json.optBoolean("centered", defaults.centered),
+                offsetXDp = json.optDouble("offsetXDp", 0.0).toFloat()
+                    .takeIf { it.isFinite() }?.coerceIn(-120f, 120f) ?: 0f,
             ).normalized()
         }
     }

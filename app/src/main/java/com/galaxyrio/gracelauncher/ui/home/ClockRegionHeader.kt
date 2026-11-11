@@ -280,6 +280,11 @@ internal fun HomeClockHeader(
         ClockRegionRowLayout(left.size, right.size,
             Modifier.then(if (wrapWidth) Modifier else Modifier.fillMaxWidth())
                 .then(if (inset) Modifier.padding(horizontal = LauncherLayout.ContentInset) else Modifier)
+                // 2026-11-11 新增：整行横向微调。
+                // 与主要区域同理，只在非 wrapWidth 的正常桌面布局下生效。
+                .then(if (wrapWidth) Modifier else Modifier.graphicsLayer {
+                    translationX = (row.offsetXDp.takeIf { it.isFinite() }?.coerceIn(-120f, 120f) ?: 0f).dp.toPx()
+                })
                 .testTag("clock_region:$name"), wrapWidth = wrapWidth, centered = row.centered) {
             (left + right).forEach { item ->
                 key(item) {
@@ -301,6 +306,10 @@ internal fun HomeClockHeader(
         val interactions = remember { MutableInteractionSource() }
         Box(widthModifier.testTag("clock_region:Agenda"), propagateMinConstraints = wrapWidth) {
             Box(widthModifier.testTag("home_agenda")
+                // 2026-11-11 新增：日程区域横向微调。只在正常桌面布局下生效。
+                .then(if (wrapWidth) Modifier else Modifier.graphicsLayer {
+                    translationX = (regions.agenda.offsetXDp.takeIf { it.isFinite() }?.coerceIn(-120f, 120f) ?: 0f).dp.toPx()
+                })
                 .semantics { contentDescription = dateDescription }
                 .then(if (interactive) Modifier.combinedClickable(
                     interactionSource = interactions, indication = null,
@@ -330,7 +339,11 @@ internal fun HomeClockHeader(
     fun taskRegion(inset: Boolean = true, wrapWidth: Boolean = false) {
         if (taskRows.isEmpty()) return
         val widthModifier = if (wrapWidth) Modifier else Modifier.fillMaxWidth()
-        Column(widthModifier.testTag("clock_region:Task")) {
+        Column(widthModifier.testTag("clock_region:Task")
+            // 2026-11-11 新增：任务区域横向微调。只在正常桌面布局下生效。
+            .then(if (wrapWidth) Modifier else Modifier.graphicsLayer {
+                translationX = (regions.tasks.offsetXDp.takeIf { it.isFinite() }?.coerceIn(-120f, 120f) ?: 0f).dp.toPx()
+            })) {
             taskRows.forEach { (task, fields) ->
                 key(task.id) {
                     val interactions = remember { MutableInteractionSource() }

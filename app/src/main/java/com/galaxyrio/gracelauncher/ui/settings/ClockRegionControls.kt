@@ -222,6 +222,15 @@ internal fun LazyListScope.clockRegionSettings(
             SettingsToggleItem(stringResource(R.string.grace_button_align_center), null, row.centered,
                 index, count, "${prefix}_centered", enabled) { value -> changeRow { it.copy(centered = value) } }
         }
+        // 2026-11-11 新增：次要/第三区域的横向微调，两者各存各的值。
+        if (row.selected.isNotEmpty()) controls += ClockControl("offset_x") { index, count ->
+            ClockSlider(stringResource(R.string.clock_offset_x), row.offsetXDp.roundToInt(), 0,
+                -120..120, 1, index, count, "${prefix}_offset_x", enabled,
+                valueLabel = if (row.offsetXDp.roundToInt() == 0) null
+                    else "%+d dp".format(row.offsetXDp.roundToInt())) { value ->
+                changeRow { it.copy(offsetXDp = value.toFloat()) }
+            }
+        }
         if (ClockElement.Clock in row.selected) controls += ClockControl("seconds") { index, count ->
             SettingsToggleItem(stringResource(R.string.clock_show_seconds), null, row.showSeconds,
                 index, count, "${prefix}_show_seconds", enabled) { value -> changeRow { it.copy(showSeconds = value) } }
@@ -305,6 +314,15 @@ internal fun LazyListScope.clockRegionSettings(
                     label = { it.label() }, onSelect = { alignment -> changeAgenda { it.copy(alignment = alignment) } })
             }
         }
+        // 2026-11-11 新增：日程区域横向微调。
+        agendaControls += ClockControl("offset_x") { index, count ->
+            ClockSlider(stringResource(R.string.clock_offset_x), agenda.offsetXDp.roundToInt(), 0,
+                -120..120, 1, index, count, "clock_agenda_offset_x", enabled,
+                valueLabel = if (agenda.offsetXDp.roundToInt() == 0) null
+                    else "%+d dp".format(agenda.offsetXDp.roundToInt())) { value ->
+                changeAgenda { it.copy(offsetXDp = value.toFloat()) }
+            }
+        }
         agendaControls += ClockControl("font") { index, count ->
             SettingsActionItem(stringResource(R.string.settings_font), appFontLabel(agenda.typography.fontId), index, count,
                 "clock_agenda_font_selector", enabled = enabled) { onRegionFont(ClockRegion.Agenda) }
@@ -354,6 +372,15 @@ internal fun LazyListScope.clockRegionSettings(
             ClockControlSegment(index, count, "clock_task_alignment") {
                 ClockChoices(ClockAlignment.entries, tasks.alignment, enabled, "clock_task_alignment",
                     label = { it.label() }, onSelect = { alignment -> changeTasks { it.copy(alignment = alignment) } })
+            }
+        }
+        // 2026-11-11 新增：任务区域横向微调。
+        taskControls += ClockControl("offset_x") { index, count ->
+            ClockSlider(stringResource(R.string.clock_offset_x), tasks.offsetXDp.roundToInt(), 0,
+                -120..120, 1, index, count, "clock_task_offset_x", enabled,
+                valueLabel = if (tasks.offsetXDp.roundToInt() == 0) null
+                    else "%+d dp".format(tasks.offsetXDp.roundToInt())) { value ->
+                changeTasks { it.copy(offsetXDp = value.toFloat()) }
             }
         }
         taskControls += ClockControl("font") { index, count ->

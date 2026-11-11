@@ -12,6 +12,8 @@ data class ClockTasks(
     val taskCount: Int = 1,
     val useLatinLetters: Boolean = false,
     val alignment: ClockAlignment = ClockAlignment.Left,
+    /** 2026-11-11 新增：任务区域横向微调（dp），用途同 ClockRegionRow.offsetXDp。 */
+    val offsetXDp: Float = 0f,
 ) {
     val visibleFields: List<ClockTaskField> get() = normalized().order.filter { it in selected }
 
@@ -30,6 +32,7 @@ data class ClockTasks(
         put("taskCount", value.taskCount)
         put("useLatinLetters", value.useLatinLetters)
         put("alignment", value.alignment.name)
+        put("offsetXDp", value.offsetXDp.takeIf { it.isFinite() }?.coerceIn(-120f, 120f) ?: 0f)
     } }
 
     companion object {
@@ -54,6 +57,8 @@ data class ClockTasks(
                 taskCount = json.optInt("taskCount", defaults.taskCount),
                 useLatinLetters = json.optBoolean("useLatinLetters", defaults.useLatinLetters),
                 alignment = ClockAlignment.entries.firstOrNull { it.name == json.optString("alignment") } ?: defaults.alignment,
+                offsetXDp = json.optDouble("offsetXDp", 0.0).toFloat()
+                    .takeIf { it.isFinite() }?.coerceIn(-120f, 120f) ?: 0f,
             ).normalized()
         }
     }

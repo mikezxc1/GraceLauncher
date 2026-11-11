@@ -347,13 +347,28 @@ fun HomeScreen(
                 val widgetX = (widget?.homeOffsetXDp ?: 0f)
                 val dragX = if (widget != null && reorder.draggingKey == entry.key) dragOffsetX else 0f
                 val widgetXState by rememberUpdatedState(widgetX)
+                // 2026-11-11 新增：桌面上组件的纵向偏移。
+                //
+                // 用户要「每个小组件可以单独上下调节，并且可以和时间叠加」。
+                // 这个值走 graphicsLayer 的 translationY，和拖拽的 offset 相加：
+                //   · 不拖拽时 translationY = 保存的偏移，组件停在用户调好的位置
+                //   · 拖拽时 translationY = 偏移 + 拖拽位移，跟手且不丢已保存的量
+                // 相加而不是覆盖，否则一拖拽就会跳回原位。
+                val widgetY = (widget?.homeOffsetYDp ?: 0f)
+                val widgetYState by rememberUpdatedState(widgetY)
                 // 2026-11-11：横向可拖范围的上限，dp 常量 160 换算成像素后的值。
                 // 用像素换算而不是写死 160，是因为 dragOffsetX 全程是像素。
                 val maxOffsetPx = with(density) { 160.dp.toPx() }
                 Box(Modifier.fillMaxWidth()
                     .then(if (dragging) Modifier else Modifier.animateItem())
                     .zIndex(if (dragging || reorder.drop?.key == entry.key) 1f else 0f)
-                    .graphicsLayer { translationY = offset; translationX = if (widget != null) widgetX.dp.toPx() + dragX else 0f }
+                    .graphicsLayer {
+                        // 纵向 = 换行翻译 + 组件自身纵向偏移（仅小组件行）。
+                        // 两者必须相加：offset 是拖拽换行的实时位移，
+                        // widgetY 是用户调好并存下来的固定偏移，缺一个都会出错。
+                        translationY = offset + (if (widget != null) widgetYState.dp.toPx() else 0f)
+                        translationX = if (widget != null) widgetX.dp.toPx() + dragX else 0f
+                    }
                     .onGloballyPositioned { coordinates = it }
                     .onSizeChanged { itemHeights[entry.key] = it.height }
                     .testTag("home_item:${entry.key}")

@@ -75,7 +75,7 @@ internal fun PopupWidgetControls(
                 onValueChangeFinished = { onChange(layout, true) }, valueRange = 50f..150f,
                 modifier = Modifier.weight(1f).testTag("popup_widget_scale"))
         }
-        // 2026-11-10 新增：圆角滑块。
+        // 2026-11-11 新增：圆角滑块。
         // 只对小组件生效，不影响应用图标行——因为裁剪是加在小组件宿主的 Modifier 上的。
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.popup_widget_corner, layout.popupWidgetCornerDp),
@@ -84,6 +84,22 @@ internal fun PopupWidgetControls(
                 onValueChange = { onChange(layout.copy(popupWidgetCornerDp = it.roundToInt()), false) },
                 onValueChangeFinished = { onChange(layout, true) }, valueRange = 0f..48f,
                 modifier = Modifier.weight(1f).testTag("popup_widget_corner"))
+        }
+        // 2026-11-11 新增：纵向偏移滑块。
+        //
+        // 由来：用户反馈「时间和小组件之间的空隙太大了」，要求每个组件单独上下调节。
+        // 范围 -200~200 dp，负值上移（可压到时间行上），正值下移。
+        // 显示时带正负号，0 时显示「0 dp」而不是隐藏——这个值需要一眼看到当前在哪个位置。
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // 正数补 + 号：这个值有方向含义（上移/下移），不补号时 50 和 -50
+            // 只差一个字符，扫一眼容易看错方向。
+            val offsetText = layout.homeOffsetYDp.roundToInt().let { if (it > 0) "+$it" else "$it" }
+            Text(stringResource(R.string.popup_widget_offset_y, offsetText),
+                modifier = Modifier.widthIn(max = 112.dp), style = MaterialTheme.typography.labelMedium)
+            Slider(value = layout.homeOffsetYDp,
+                onValueChange = { onChange(layout.copy(homeOffsetYDp = it), false) },
+                onValueChangeFinished = { onChange(layout, true) }, valueRange = -200f..200f,
+                modifier = Modifier.weight(1f).testTag("popup_widget_offset_y"))
         }
     }
 }

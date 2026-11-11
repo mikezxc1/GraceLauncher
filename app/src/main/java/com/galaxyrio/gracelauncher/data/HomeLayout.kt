@@ -24,6 +24,21 @@ data class HomeLayout(
      */
     val homeOffsetXDp: Float = 0f,
     /**
+     * 2026-11-11 新增：桌面上的组件纵向偏移（dp）。
+     *
+     * 由来：用户反馈「时间和小组件之间的空隙太大了」，要求「每个小组件可以单独上下调节，
+     * 并且可以和时间叠加」。
+     *
+     * 为什么用绘制层平移而不是改 padding：
+     * padding 会参与布局测量，把偏移量算进行高，等于只挪内容不挪占位——
+     * 上移时空隙还在原处，只是组件变矮了，达不到「消除空隙」的效果。
+     * 用 graphicsLayer 平移是纯绘制位移，组件整体上移，视觉上空隙真正消失，
+     * 也就实现了用户说的「和时间叠加」。负值上移、正值下移。
+     *
+     * 范围 -200~200，足够把组件推到任意相邻行附近，又不至于飞出屏幕找不回来。
+     */
+    val homeOffsetYDp: Float = 0f,
+    /**
      * 2026-11-10 新增：弹窗内小组件的圆角半径（dp）。
      *
      * 为什么需要它：几何天气这类组件的卡片是它自己 RemoteViews 画的圆角，
@@ -58,6 +73,7 @@ data class HomeLayout(
         put("popupBackground", popupBackground)
         put("popupContentScale", popupContentScale.coerceIn(50, 150))
         put("homeOffsetXDp", homeOffsetXDp.takeIf { it.isFinite() }?.coerceIn(-160f, 160f) ?: 0f)
+        put("homeOffsetYDp", homeOffsetYDp.takeIf { it.isFinite() }?.coerceIn(-200f, 200f) ?: 0f)
         put("popupWidgetCornerDp", popupWidgetCornerDp.coerceIn(0, 48))
         homeOrder?.let { put("homeOrder", org.json.JSONArray(normalizeHomeOrder(it))) }
         put("baselineEnabled", baselineEnabled)
@@ -80,6 +96,7 @@ data class HomeLayout(
                 popupBackground = data.optBoolean("popupBackground", false),
                 popupContentScale = data.optInt("popupContentScale", 100).coerceIn(50, 150),
                 homeOffsetXDp = data.optDouble("homeOffsetXDp", 0.0).toFloat().takeIf { it.isFinite() }?.coerceIn(-160f, 160f) ?: 0f,
+                homeOffsetYDp = data.optDouble("homeOffsetYDp", 0.0).toFloat().takeIf { it.isFinite() }?.coerceIn(-200f, 200f) ?: 0f,
                 popupWidgetCornerDp = data.optInt("popupWidgetCornerDp", 16).coerceIn(0, 48),
                 homeOrder = data.optJSONArray("homeOrder")?.let { array ->
                     normalizeHomeOrder((0 until array.length()).mapNotNull { (array.opt(it) as? String)?.takeIf(String::isNotBlank) })

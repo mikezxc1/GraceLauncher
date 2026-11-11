@@ -91,6 +91,20 @@ data class ClockRegionRow(
 data class ClockRegions(
     val primary: ClockElement? = ClockElement.Clock,
     val primaryAlignment: ClockAlignment = ClockAlignment.Left,
+    /**
+     * 2026-11-11 新增：主区域横向微调（dp）。
+     *
+     * 由来：用户反馈「时间只有左中右三个大方向调节，没有办法微调」。
+     * primaryAlignment 是 Box 的 contentAlignment，只有三个离散档位，
+     * 摆位粒度太粗。这个字段在对齐结果之上再整体平移，
+     * 让时钟能精确停在想要的位置。
+     *
+     * 为什么用 graphicsLayer 而不是 offset：offset 会参与布局，
+     * 在 fillMaxWidth 的容器上偏移可能影响测量与换行；graphicsLayer 只改绘制位置。
+     *
+     * 范围 -120~120，超出部分会被裁到边界。
+     */
+    val primaryOffsetXDp: Float = 0f,
     val primaryFaces: Map<ClockElement, ClockFaceStyle> = emptyMap(),
     val stackedClock: Boolean = false,
     val secondary: ClockRegionRow = ClockRegionRow(selected = setOf(
@@ -173,6 +187,7 @@ data class ClockRegions(
         JSONObject().apply {
             put("primary", regions.primary?.name ?: JSONObject.NULL)
             put("primaryAlignment", regions.primaryAlignment.name)
+            put("primaryOffsetXDp", regions.primaryOffsetXDp.takeIf { it.isFinite() }?.coerceIn(-120f, 120f) ?: 0f)
             put("stackedClock", regions.stackedClock)
             put("rotateAbovePrimary", regions.rotateAbovePrimary)
             put("rotatePrimary", regions.rotatePrimary)
@@ -277,6 +292,8 @@ data class ClockRegions(
                 primary = primary,
                 primaryAlignment = ClockAlignment.entries.firstOrNull { it.name == json.optString("primaryAlignment") }
                     ?: ClockAlignment.Left,
+                primaryOffsetXDp = json.optDouble("primaryOffsetXDp", 0.0).toFloat()
+                    .takeIf { it.isFinite() }?.coerceIn(-120f, 120f) ?: 0f,
                 stackedClock = json.optBoolean("stackedClock", false),
                 rotateAbovePrimary = json.optBoolean("rotateAbovePrimary", false),
                 rotatePrimary = if (json.has("rotatePrimary")) json.optBoolean("rotatePrimary", false)

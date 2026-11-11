@@ -246,8 +246,17 @@ internal fun HomeClockHeader(
             ClockAlignment.Center -> Alignment.Center
             ClockAlignment.Right -> AbsoluteAlignment.CenterRight
         }
+        // 2026-11-11 新增：在左/中/右三档对齐之上再做连续微调。
+        //
+        // 为什么只在 fillWidth 时应用：
+        // fillWidth = false 出现在 wrapWidth（旋转列）与 ClockAbovePrimaryLayout 两条路径，
+        // 那两处的横向位置由 ClockRotatedRegionColumn 自己按 primaryAlignment 计算，
+        // 再叠加一次偏移会双重位移、错位。
+        val offsetX = regions.primaryOffsetXDp.takeIf { it.isFinite() }?.coerceIn(-120f, 120f) ?: 0f
+        val applyOffset = fillWidth && offsetX != 0f
         Box(Modifier.then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
             .then(if (inset) Modifier.padding(horizontal = LauncherLayout.ContentInset) else Modifier)
+            .then(if (applyOffset) Modifier.graphicsLayer { translationX = offsetX.dp.toPx() } else Modifier)
             .testTag("clock_region:Primary"), contentAlignment = alignment) {
             if (regions.rotatePrimary && !regions.rotateAll) ClockQuarterTurn(maxRotatedHeightPx) {
                 element(primary, true, primaryStyle, Modifier,

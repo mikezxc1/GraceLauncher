@@ -347,6 +347,9 @@ fun HomeScreen(
                 val widgetX = (widget?.homeOffsetXDp ?: 0f)
                 val dragX = if (widget != null && reorder.draggingKey == entry.key) dragOffsetX else 0f
                 val widgetXState by rememberUpdatedState(widgetX)
+                // 2026-11-11：横向可拖范围的上限，dp 常量 160 换算成像素后的值。
+                // 用像素换算而不是写死 160，是因为 dragOffsetX 全程是像素。
+                val maxOffsetPx = with(density) { 160.dp.toPx() }
                 Box(Modifier.fillMaxWidth()
                     .then(if (dragging) Modifier else Modifier.animateItem())
                     .zIndex(if (dragging || reorder.drop?.key == entry.key) 1f else 0f)
@@ -364,8 +367,11 @@ fun HomeScreen(
                                     currentStart(entry.key)
                                 },
                                 onDragEnd = {
+                                    // 2026-11-11 修正：与下面 PopupWidgetItem 的 onDragEnd 同理。
+                                    // dragOffsetX 是像素，homeOffsetXDp 是 dp，写回必须换算。
+                                    // 这一处是外层整行手势的收尾，原生子视图没吃掉事件时会走这里。
                                     if (dragAxis == 1 && widget != null) {
-                                        latestOffsetX(entry.key, widgetXState + dragOffsetX)
+                                        latestOffsetX(entry.key, widgetXState + dragOffsetX / density.density)
                                     }
                                     dragOffsetX = 0f; totalXD = 0f; totalYD = 0f; dragAxis = 0
                                     reorder.finish(false)
@@ -376,19 +382,37 @@ fun HomeScreen(
                                 },
                             ) { change, _ ->
                                 val root = coordinates?.localToRoot(change.position) ?: change.position
-                                val dx = root.x - previous.x
-                                val dy = root.y - previous.y
+                                // 2026-11-11 修正：这里全程保持**像素**，只在写回 dp 字段时换算。
+                                //
+                                // 为什么不能在这里除密度：
+                                // · 纵向路径要喂给 FavoritesReorderState，它的 top 直接对应
+                                //   LazyListState 的 item.offset，两者都是像素。除密度会让
+                                //   上下拖动的速度变成 1/3。
+                                // · 横向路径要叠进 graphicsLayer.translationX，那里是
+                                //   widgetX.dp.toPx() + dragOffsetX，dragOffsetX 必须是像素。
+                                //
+                                // 上一版的真实错误只有一个：松手时把「像素」当成「dp」
+                                // 写进 homeOffsetXDp，480dpi 屏等于放大 3 倍，
+                                // 所以拖哪松手就跳到 3 倍远的地方。修在 onDragEnd 那一行。
+                                val dxPx = root.x - previous.x
+                                val dyPx = root.y - previous.y
                                 change.consume()
-                                totalXD += dx; totalYD += dy
-                                // 2026-11-11：方向判定带锁定，一旦横向领先就只调位置，不再换行。
-                                if (dragAxis == 0 && widget != null &&
-                                    kotlin.math.abs(totalXD) > kotlin.math.abs(totalYD) * 1.5f && kotlin.math.abs(totalXD) > 12f) {
-                                    dragAxis = 1
-                                }
-                                if (dragAxis == 1) {
-                                    dragOffsetX = (dragOffsetX + dx).coerceIn(-160f, 160f)
-                                } else {
-                                    currentDrag(dy)
+                                totalXD += dxPx; totalYD += dyPx
+                                // 2026-11-11：判定阈值。原来是裸的 12f（=12 像素≈4dp），
+                                // 4dp 太容易误判成横向；改成 8dp + 1.3 倍占比，
+                                // 既比原版 12f 更跟手，又不会被手指抖动带偏。
+                                val lockSlopPx = 8.dp.toPx()
+                                val justLocked = dragAxis == 0 && widget != null &&
+                                    kotlin.math.abs(totalXD) > kotlin.math.abs(totalYD) * 1.3f && kotlin.math.abs(totalXD) > lockSlopPx
+                                if (justLocked) dragAxis = 1
+                                when {
+                                    dragAxis == 1 && justLocked ->
+                                        // 锁定帧：totalXD 已经把本帧 dxPx 算进去了，
+                                        // 直接取 totalXD。若再走下面的 +dxPx 会重复累加一帧。
+                                        dragOffsetX = totalXD.coerceIn(-maxOffsetPx, maxOffsetPx)
+                                    dragAxis == 1 ->
+                                        dragOffsetX = (dragOffsetX + dxPx).coerceIn(-maxOffsetPx, maxOffsetPx)
+                                    else -> currentDrag(dyPx)
                                 }
                                 previous = root
                             }
@@ -477,10 +501,19 @@ fun HomeScreen(
                                 }
                             },
                             onDragEnd = { cancelled ->
-                                // 横向模式松手 → 把实时位移写回持久字段
+                                // 2026-11-11 修正：松手跳位的根因就在这里。
+                                //
+                                // dragOffsetX 全程是**像素**（来自 localToRoot 差值），
+                                // 而 homeOffsetXDp 是**dp**。上一版直接写 base + dragOffsetX，
+                                // 等于把像素当 dp 存，480dpi 屏（density=3）写入值放大 3 倍，
+                                // 所以「拖到位置、松手、自己跳到别处」。
+                                //
+                                // 正确做法：写回前除以 density 换成 dp。
+                                // base 本来就是 dp，不需要动。
                                 if (dragAxis == 1) {
                                     val base = widget?.homeOffsetXDp ?: 0f
-                                    latestOffsetX(entry.key, base + dragOffsetX)
+                                    val deltaDp = dragOffsetX / density.density
+                                    latestOffsetX(entry.key, base + deltaDp)
                                 }
                                 dragOffsetX = 0f; totalXD = 0f; totalYD = 0f; dragAxis = 0
                                 reorder.finish(cancelled)

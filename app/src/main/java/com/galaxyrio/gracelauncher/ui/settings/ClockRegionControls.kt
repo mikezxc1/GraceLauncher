@@ -36,6 +36,7 @@ import com.galaxyrio.gracelauncher.R
 import com.galaxyrio.gracelauncher.data.*
 import com.galaxyrio.gracelauncher.ui.home.clockBatteryIcon
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 private data class ClockControl(val key: String, val content: @Composable (Int, Int) -> Unit)
 private class ClockElementDrop(val key: String, val center: Float)
@@ -99,6 +100,20 @@ internal fun LazyListScope.clockRegionSettings(
             ClockControlSegment(index, count, "clock_primary_alignment") {
                 ClockChoices(ClockAlignment.entries, regions.primaryAlignment, enabled, "clock_primary_alignment",
                     label = { it.label() }, onSelect = { alignment -> onChange { it.copy(primaryAlignment = alignment) } })
+            }
+        }
+        // 2026-11-11 新增：横向微调滑块。
+        //
+        // 为什么放在对齐后面：对齐定大方向，滑块做微调，操作顺序和心智模型一致。
+        // 范围 -120~120dp、步长 1：屏宽 360dp，±120 足够把时钟推到任意可见位置；
+        // 超出这个范围只会移出可视区，没有意义。
+        // 只在 fillWidth 路径生效（普通桌面），所以这里不依赖 fillWidth 参数。
+        primaryControls += ClockControl("offset_x") { index, count ->
+            ClockSlider(stringResource(R.string.clock_offset_x), regions.primaryOffsetXDp.roundToInt(), 0,
+                -120..120, 1, index, count, "clock_primary_offset_x", enabled,
+                valueLabel = if (regions.primaryOffsetXDp.roundToInt() == 0) null
+                    else "%+d dp".format(regions.primaryOffsetXDp.roundToInt())) { value ->
+                onChange { it.copy(primaryOffsetXDp = value.toFloat()) }
             }
         }
         if (primary == ClockElement.Clock) primaryControls += ClockControl("lines") { index, count ->

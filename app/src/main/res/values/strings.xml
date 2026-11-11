@@ -755,6 +755,7 @@
     <string name="clock_letter_spacing">Letter spacing</string>
     <string name="clock_digit_spacing">Digit spacing</string>
     <string name="clock_hour_minute_spacing">Hour–minute spacing</string>
+    <string name="clock_offset_x">Horizontal offset</string>
     <string name="clock_font_shadow">Font shadow</string>
     <string name="clock_separate_digits">Digit separation</string>
     <string name="clock_separate_digits_summary">Leave a transparent outline between overlapping characters</string>

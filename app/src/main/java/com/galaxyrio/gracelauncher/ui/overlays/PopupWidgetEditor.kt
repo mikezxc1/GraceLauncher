@@ -182,6 +182,11 @@ internal fun PopupWidgetItem(
                     onDragStart = { _, _ -> currentStart() },
                     // 2026-11-11：把 dx 和 dy 都往下传，不再丢掉 x。
                     // 原来写 { _, y -> currentDrag(y) }，横向位移在这里被吞掉。
+                    //
+                    // 注意：这里**保持像素**不换算。整条链路（HomeWidgetHostView 的
+                    // rawX 差 → HomeScreen 的 dragOffsetX → graphicsLayer.translationX）
+                    // 统一用像素，dp 换算只在写回 homeOffsetXDp 的那一刻做一次。
+                    // 上一版的 bug 正是那条链路上少做了那一次换算。
                     onDrag = { dx, dy -> currentDrag(dx, dy) }, onDragEnd = { currentEnd(it) },
                     contentScale = layout.popupContentScale / 100f, removeHorizontalPadding = layout.popupFullWidth,
                     cornerRadiusDp = layout.popupWidgetCornerDp.toFloat())
